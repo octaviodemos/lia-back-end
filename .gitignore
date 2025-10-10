@@ -1,0 +1,11 @@
+# Dependências e Diretórios Gerados
+/node_modules
+/src/generated/
+
+# Dados Locais e Temporários
+/postgres-data
+/pgdata
+/.vscode
+
+# Arquivos de Configuração de Variáveis de Ambiente
+.env
