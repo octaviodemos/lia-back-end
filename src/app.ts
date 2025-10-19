@@ -4,6 +4,7 @@ import passport from 'passport';
 import { userRoutes } from '@/modules/users/user.routes';
 import { authRoutes } from '@/modules/auth/auth.routes';
 import { bookRoutes } from '@/modules/books/book.routes';
+import { stockRoutes } from '@/modules/stock/stock.routes';
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get('/', (_req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/stock', stockRoutes);
 
 export { app };
