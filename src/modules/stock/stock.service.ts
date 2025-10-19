@@ -1,5 +1,6 @@
 import { BookRepository } from '@/modules/books/book.repository';
 import { StockRepository } from './stock.repository';
+import { Prisma } from '@prisma/client';
 
 interface ICreateStockItem {
   id_livro: number;
@@ -31,6 +32,17 @@ export class StockService {
       },
     });
 
+
     return stockItem;
   }
+
+  async update(id_estoque: number, data: Prisma.EstoqueUpdateInput) {
+    const stockItemExists = await this.stockRepository.findById(id_estoque);
+    if (!stockItemExists) {
+      throw new Error('Item de estoque não encontrado.');
+    }
+
+    return this.stockRepository.update(id_estoque, data);
+  }
+
 }

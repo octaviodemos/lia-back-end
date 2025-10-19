@@ -20,4 +20,11 @@ stockRoutes.post(
   (req, res) => controller.create(req, res),
 );
 
+stockRoutes.put(
+  '/:id',
+  ensureAuthenticated,
+  ensureAdmin,
+  (req, res) => controller.update(req, res),
+);
+
 export { stockRoutes };
