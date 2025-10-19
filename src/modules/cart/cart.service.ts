@@ -1,4 +1,4 @@
-import { StockRepository } from '@/modules/stock/stock.repository'; // Reutilizando!
+import { StockRepository } from '@/modules/stock/stock.repository';
 import { CartRepository } from './cart.repository';
 
 interface IAddItem {
