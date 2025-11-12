@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookRepository } from '@/modules/books/book.repository';
 import { StockRepository } from './stock.repository';
 import { Prisma } from '@prisma/client';
@@ -18,7 +18,12 @@ export class StockService {
   ) {}
 
   async create({ id_livro, quantidade, preco, condicao }: ICreateStockItem) {
-    const book = await this.bookRepository.findById(id_livro);
+    if (id_livro == null || Number.isNaN(Number(id_livro))) {
+      // bad request: id_livro missing or invalid
+      throw new BadRequestException('Parâmetro id_livro inválido ou ausente.');
+    }
+
+    const book = await this.bookRepository.findById(Number(id_livro));
     if (!book) {
       throw new NotFoundException('Livro não encontrado com o ID fornecido.');
     }

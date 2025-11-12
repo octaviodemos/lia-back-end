@@ -209,7 +209,19 @@ Aqui está uma lista dos principais endpoints disponíveis até o momento.
 
 #### Estoque (`/api/stock`)
 -   `POST /`: **(Admin)** Adiciona um livro ao estoque com preço e quantidade.
+        -   Observação: o campo `preco` é enviado e retornado como string no formato monetário com duas casas decimais (ex.: "49.90"). Isso preserva a precisão e evita problemas com ponto flutuante no cliente.
+        -   Exemplo de corpo para criação (JSON):
+
+                ```json
+                {
+                    "id_livro": 1,
+                    "quantidade": 10,
+                    "preco": "49.90",
+                    "condicao": "novo"
+                }
+                ```
 -   `PUT /:id`: **(Admin)** Atualiza um item de estoque.
+-   `PUT /:id`: **(Admin)** Atualiza um item de estoque. (Aceita `preco` como string no mesmo formato)
 
 #### Carrinho (`/api/cart`)
 -   `GET /`: **(Protegida)** Retorna o conteúdo completo do carrinho do usuário.

@@ -10,12 +10,12 @@ export class StockDto {
   @ApiProperty({ example: 10 })
   quantidade!: number;
 
-  @ApiProperty({ example: 49.9 })
-  preco!: number;
+  @ApiProperty({ example: '49.90' })
+  preco!: string;
 
   @ApiProperty({ example: 'novo', required: false })
   condicao?: string;
 
-  @ApiProperty({ type: String })
-  created_at!: Date;
+  @ApiProperty({ type: String, required: false })
+  created_at?: Date;
 }

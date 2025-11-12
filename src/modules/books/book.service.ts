@@ -32,12 +32,26 @@ export class BookService {
     // com preco, condicao e quantidade conforme solicitado.
     const estoque = ((book as any).estoque || []).map((s: any) => {
       const precoRaw = s.preco;
-      const preco = typeof precoRaw === 'object' && precoRaw?.toNumber ? precoRaw.toNumber() : Number(precoRaw);
+      // Convert Prisma Decimal to string with 2 decimal places for safe monetary representation
+      let precoStr: string;
+      try {
+        if (precoRaw && typeof precoRaw === 'object' && typeof precoRaw.toString === 'function') {
+          precoStr = precoRaw.toString();
+        } else {
+          precoStr = String(precoRaw);
+        }
+        // ensure two decimal places when possible
+        const num = Number(precoStr);
+        precoStr = Number.isFinite(num) ? num.toFixed(2) : precoStr;
+      } catch (e) {
+        precoStr = String(precoRaw);
+      }
+
       return {
         id_estoque: s.id_estoque,
         id_livro: s.id_livro,
         quantidade: s.quantidade,
-        preco,
+        preco: precoStr,
         condicao: s.condicao,
         created_at: s.created_at || null,
       };
