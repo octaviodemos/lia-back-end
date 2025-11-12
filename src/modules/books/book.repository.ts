@@ -1,24 +1,27 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
 
-const prisma = new PrismaClient();
-
+@Injectable()
 export class BookRepository {
+  constructor(private prisma: PrismaService) {}
+
   async create(data: Prisma.LivroCreateInput) {
-    return prisma.livro.create({ data });
+    return this.prisma.livro.create({ data });
   }
 
   async findByIsbn(isbn: string) {
-    return prisma.livro.findUnique({
+    return this.prisma.livro.findUnique({
       where: { isbn },
     });
   }
 
   async findAll() {
-    return prisma.livro.findMany();
+    return this.prisma.livro.findMany();
   }
 
   async findById(id_livro: number) {
-    return prisma.livro.findUnique({
+    return this.prisma.livro.findUnique({
       where: { id_livro },
     });
   }

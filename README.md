@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-API RESTful desenvolvida para o Projeto LIA, um e-commerce de livros com funcionalidades de loja pessoal e serviços de aquisição e reforma. Construída com Node.js, Express, TypeScript e Prisma, seguindo uma arquitetura modular e orientada a domínios.
+API RESTful desenvolvida para o Projeto LIA, um e‑commerce de livros com funcionalidades de loja pessoal e serviços de aquisição e reforma. NestJS — construída com Node.js, NestJS, TypeScript e Prisma, seguindo uma arquitetura modular e orientada a domínios.
 
 ---
 
@@ -47,7 +47,7 @@ Esta API foi construída com um conjunto de ferramentas modernas e robustas. O c
 -   [x] **Backend:**
     -   [x] **Node.js:** Ambiente de execução JavaScript.
     -   [x] **TypeScript:** Superset do JavaScript que adiciona tipagem estática.
-    -   [x] **Express.js:** Framework web minimalista para a criação das rotas e middlewares.
+    -   [x] **NestJS:** Framework modular para Node.js que organiza controllers, providers e módulos.
 
 -   [x] **Banco de Dados & ORM:**
     -   [x] **PostgreSQL:** Banco de dados relacional.
@@ -62,7 +62,7 @@ Esta API foi construída com um conjunto de ferramentas modernas e robustas. O c
     -   [ ] **CORS:** _(Instalado, mas ainda não configurado no `app.ts`)_ Middleware para habilitar o Cross-Origin Resource Sharing.
 
 -   [x] **Validação de Dados:**
-    -   [x] **Zod:** Biblioteca utilizada para validação de schemas em todos os módulos.
+    -   [x] **class-validator & class-transformer:** Validação e transformação com DTOs e ValidationPipe do Nest.
 
 -   [x] **Qualidade de Código & Ferramentas de Desenvolvimento:**
     -   [x] **ESLint:** Configurado para análise estática de código.
@@ -75,9 +75,10 @@ Esta API foi construída com um conjunto de ferramentas modernas e robustas. O c
     -   [ ] **Testes de Unidade:** Cobertura de testes para as regras de negócio nos `services`.
     -   [ ] **Testes de Integração:** Cobertura de testes para os `controllers` e `endpoints`.
 
--   [ ] **Documentação da API:**
-    -   [x] **Swagger:** Bibliotecas (`swagger-ui-express` & `swagger-jsdoc`) instaladas.
-    -   [ ] **Configuração e Geração:** Geração da documentação visual da API a partir de comentários no código.
+-   [x] **Documentação da API:**
+    -   [x] **@nestjs/swagger:** Documentação automática gerada a partir de decorators (`@ApiProperty`, `@ApiTags`, etc).
+        -   [x] **Gerador de spec:** script `npm run generate:swagger` (CI-friendly) gera um snapshot OpenAPI versionável em `docs/openapi.json`.
+        -   [x] **Gerador de spec (dev):** `npm run generate:swagger:dev` executa o gerador direto do TypeScript para desenvolvimento rápido e também atualiza `docs/openapi.json`.
 
 -   [ ] **Pagamentos:**
     -   [x] **Mercado Pago SDK:** Biblioteca instalada.
@@ -135,6 +136,27 @@ npm run dev
 ```
 O servidor estará rodando em `http://localhost:3333` (ou na porta que você definiu no seu `.env`).
 
+**7. Acesse a documentação (Swagger):**
+
+Após iniciar a aplicação, a UI do Swagger fica disponível em:
+
+```
+http://localhost:3333/api/docs
+```
+
+Se quiser gerar um snapshot do OpenAPI para uso externo (por exemplo, publicar no Git ou em um gateway), rode:
+
+```bash
+npm run generate:swagger
+```
+O arquivo será escrito em `docs/openapi.json`.
+Você também pode gerar localmente sem compilar com:
+
+```bash
+npm run generate:swagger:dev
+```
+Esse comando executa o gerador diretamente do TypeScript (útil para desenvolvimento rápido).
+
 ---
 
 ## Scripts Disponíveis
@@ -142,8 +164,11 @@ O servidor estará rodando em `http://localhost:3333` (ou na porta que você def
 -   `npm run dev`: Inicia o servidor em modo de desenvolvimento com hot-reload.
 -   `npm run build`: Compila o código TypeScript para JavaScript.
 -   `npm run start`: Inicia o servidor a partir dos arquivos compilados (modo de produção).
--   `npm test`: Roda os testes automatizados com Jest.
--   `npm run lint`: Verifica o código em busca de erros de padrão com ESLint.
+ -   `npm run start`: Inicia o servidor a partir dos arquivos compilados (modo de produção).
+ -   `npm test`: Roda os testes automatizados com Jest.
+ -   `npm run lint`: Verifica o código em busca de erros de padrão com ESLint.
+ -   `npm run generate:swagger`: Compila o projeto e executa o gerador (CI-friendly). Gera `docs/openapi.json`.
+ -   `npm run generate:swagger:dev`: Executa o gerador direto do código TypeScript (sem build) — rápido para desenvolvimento. Gera `docs/openapi.json`.
 
 ---
 

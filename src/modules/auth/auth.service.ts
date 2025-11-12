@@ -1,27 +1,45 @@
-import { compare } from 'bcryptjs';
-import { sign } from 'jsonwebtoken';
-import { UserRepository } from '@/modules/users/user.repository';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '@/prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
 
+@Injectable()
 export class AuthService {
-  constructor(private userRepository: UserRepository) {}
+  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
-  async login(email: string, senhaInserida: string) {
-   
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) {
-      throw new Error('Email ou senha inválidos.');
-    }
+  async validateUser(email: string, password: string) {
+    const user = await this.prisma.usuario.findUnique({ where: { email } });
+    if (!user) return null;
+    const match = await bcrypt.compare(password, user.senha);
+    if (!match) return null;
+    // return user without senha
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { senha, ...safe } = user as any;
+    return safe;
+  }
 
-    const passwordMatch = await compare(senhaInserida, user.senha);
-    if (!passwordMatch) {
-      throw new Error('Email ou senha inválidos.');
-    }
+  async login(email: string, password: string) {
+    const user = await this.validateUser(email, password);
+    if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    const payload = { sub: user.id_usuario, email: user.email };
+    return { access_token: this.jwtService.sign(payload) };
+  }
 
-    const token = sign({}, process.env.JWT_SECRET || 'fallback_secret_key', {
-      subject: String(user.id_usuario),
-      expiresIn: '1d',
+  async register(dto: any) {
+    const existing = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
+    if (existing) throw new UnauthorizedException('Email já cadastrado');
+    const hashed = await bcrypt.hash(dto.password, 10);
+    const created = await this.prisma.usuario.create({
+      data: {
+        nome: dto.nome,
+        email: dto.email,
+        senha: hashed,
+        tipo_usuario: dto.tipo_usuario || 'cliente',
+      },
     });
-
-    return { token };
+    // remove senha before returning
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { senha, ...safe } = created as any;
+    return safe;
   }
 }

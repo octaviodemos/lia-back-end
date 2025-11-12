@@ -1,6 +1,8 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BookRepository } from './book.repository';
 
+@Injectable()
 export class BookService {
   constructor(private repository: BookRepository) {}
 
@@ -22,7 +24,7 @@ export class BookService {
   async findById(id_livro: number) {
     const book = await this.repository.findById(id_livro);
     if (!book) {
-      throw new Error('Livro não encontrado.');
+      throw new NotFoundException('Livro não encontrado.');
     }
     return book;
   }

@@ -1,0 +1,543 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "UsersController_findAll",
+        "summary": "List all users (admin only)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne",
+        "summary": "Get user by id",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "summary": "Log in and receive a JWT token",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT token returned"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "summary": "Register a new user",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/books": {
+      "get": {
+        "operationId": "BookController_findAll",
+        "summary": "List all books",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of books",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Books"
+        ]
+      },
+      "post": {
+        "operationId": "BookController_create",
+        "summary": "Create a new book (admin)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Book created"
+          }
+        },
+        "tags": [
+          "Books"
+        ]
+      }
+    },
+    "/books/{id}": {
+      "get": {
+        "operationId": "BookController_findById",
+        "summary": "Get a book by id",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Books"
+        ]
+      }
+    },
+    "/cart/items": {
+      "post": {
+        "operationId": "CartController_addItem",
+        "summary": "Add an item to the authenticated user's cart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
+    },
+    "/cart": {
+      "get": {
+        "operationId": "CartController_getCart",
+        "summary": "Get the authenticated user's cart",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
+    },
+    "/stock": {
+      "post": {
+        "operationId": "StockController_create",
+        "summary": "Create a stock item",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stock"
+        ]
+      }
+    },
+    "/stock/{id}": {
+      "patch": {
+        "operationId": "StockController_update",
+        "summary": "Update a stock item",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stock"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "LIA API",
+    "description": "API documentation for LIA project",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id_usuario": {
+            "type": "number",
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "example": "Fulano"
+          },
+          "email": {
+            "type": "string",
+            "example": "fulano@example.com"
+          },
+          "telefone": {
+            "type": "object",
+            "example": "+5511999999999"
+          },
+          "tipo_usuario": {
+            "type": "string",
+            "example": "customer"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id_usuario",
+          "nome",
+          "email",
+          "tipo_usuario",
+          "created_at"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "fulano@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "strong-password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Fulano da Silva"
+          },
+          "email": {
+            "type": "string",
+            "example": "fulano@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "strong-password"
+          },
+          "tipo_usuario": {
+            "type": "string",
+            "example": "customer"
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "password"
+        ]
+      },
+      "BookDto": {
+        "type": "object",
+        "properties": {
+          "id_livro": {
+            "type": "number",
+            "example": 1
+          },
+          "titulo": {
+            "type": "string",
+            "example": "O Senhor dos Anéis"
+          },
+          "sinopse": {
+            "type": "string",
+            "example": "Sinopse..."
+          },
+          "editora": {
+            "type": "string",
+            "example": "Editora XYZ"
+          },
+          "ano_publicacao": {
+            "type": "number",
+            "example": 1954
+          },
+          "isbn": {
+            "type": "string",
+            "example": "978-xxx"
+          },
+          "capa_url": {
+            "type": "string",
+            "example": "https://..."
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id_livro",
+          "titulo",
+          "created_at"
+        ]
+      },
+      "CreateBookDto": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "example": "O Senhor dos Anéis"
+          },
+          "sinopse": {
+            "type": "string",
+            "example": "Sinopse..."
+          },
+          "editora": {
+            "type": "string",
+            "example": "Editora XYZ"
+          },
+          "ano_publicacao": {
+            "type": "number",
+            "example": 1954
+          },
+          "isbn": {
+            "type": "string",
+            "example": "978-xxx"
+          },
+          "capa_url": {
+            "type": "string",
+            "example": "https://..."
+          }
+        },
+        "required": [
+          "titulo"
+        ]
+      },
+      "AddItemDto": {
+        "type": "object",
+        "properties": {
+          "id_estoque": {
+            "type": "number",
+            "example": 123
+          },
+          "quantidade": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "id_estoque",
+          "quantidade"
+        ]
+      },
+      "CreateStockDto": {
+        "type": "object",
+        "properties": {
+          "id_livro": {
+            "type": "number",
+            "example": 1
+          },
+          "quantidade": {
+            "type": "number",
+            "example": 10
+          },
+          "preco": {
+            "type": "number",
+            "example": 49.9
+          },
+          "condicao": {
+            "type": "string",
+            "example": "novo"
+          }
+        },
+        "required": [
+          "id_livro",
+          "quantidade",
+          "preco"
+        ]
+      },
+      "UpdateStockDto": {
+        "type": "object",
+        "properties": {
+          "id_livro": {
+            "type": "number",
+            "example": 1
+          },
+          "quantidade": {
+            "type": "number",
+            "example": 10
+          },
+          "preco": {
+            "type": "number",
+            "example": 49.9
+          },
+          "condicao": {
+            "type": "string",
+            "example": "novo"
+          }
+        }
+      }
+    }
+  }
+}

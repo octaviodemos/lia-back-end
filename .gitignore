@@ -6,6 +6,8 @@
 /postgres-data
 /pgdata
 /.vscode
+/.github
+/dist
 
 # Arquivos de Configuração de Variáveis de Ambiente
 .env

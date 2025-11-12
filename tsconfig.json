@@ -6,6 +6,8 @@
     "lib": ["es2022"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+  "experimentalDecorators": true,
+  "emitDecoratorMetadata": true,
 
     /* Strictness: */
     "strict": true,

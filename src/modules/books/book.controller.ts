@@ -1,42 +1,54 @@
-import { Request, Response } from 'express';
+import { Controller, Get, Post, Body, Param, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { BookService } from './book.service';
-import { createBookSchema } from './book.schemas';
+import { CreateBookDto } from './dto/create-book.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { BookDto } from './dto/book.dto';
 
+@Controller('books')
+@ApiTags('Books')
 export class BookController {
   constructor(private service: BookService) {}
 
-  async create(req: Request, res: Response) {
+  @Get()
+  @ApiOperation({ summary: 'List all books' })
+  @ApiResponse({ status: 200, description: 'List of books', type: [BookDto] })
+  async findAll() {
     try {
-      const { body } = createBookSchema.parse(req);
-      const newBook = await this.service.create(body);
-      return res.status(201).json(newBook);
+      return await this.service.findAll();
     } catch (error: any) {
-      if (error.message.includes('ISBN')) {
-        return res.status(409).json({ message: error.message });
-      }
-      return res.status(400).json({ message: 'Erro ao criar livro', details: error.errors || error.message });
+      throw new HttpException('Erro ao buscar livros.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async findAll(_req: Request, res: Response) {
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a book by id' })
+  @ApiResponse({ status: 200, description: 'Book detail', type: BookDto })
+  async findById(@Param('id') id: string) {
     try {
-      const books = await this.service.findAll();
-      return res.status(200).json(books);
+      const book = await this.service.findById(Number(id));
+      return book;
     } catch (error: any) {
-      return res.status(500).json({ message: 'Erro ao buscar livros.' });
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Erro ao buscar livro.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async findById(req: Request, res: Response) {
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Create a new book (admin)' })
+  @ApiResponse({ status: 201, description: 'Book created' })
+  async create(@Body() body: CreateBookDto) {
     try {
-      const id = parseInt(req.params.id, 10);
-      const book = await this.service.findById(id);
-      return res.status(200).json(book);
+      return await this.service.create(body as any);
     } catch (error: any) {
-      if (error.message.includes('não encontrado')) {
-        return res.status(404).json({ message: error.message });
+      if (error.message && error.message.includes('ISBN')) {
+        throw new HttpException(error.message, HttpStatus.CONFLICT);
       }
-      return res.status(500).json({ message: 'Erro ao buscar livro.' });
+      throw new HttpException('Erro ao criar livro', HttpStatus.BAD_REQUEST);
     }
   }
 }

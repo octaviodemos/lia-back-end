@@ -1,11 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
 
-const prisma = new PrismaClient();
-
+@Injectable()
 export class CartRepository {
+  constructor(private prisma: PrismaService) {}
 
   async findOrCreateByUserId(id_usuario: number) {
-    return prisma.carrinho.upsert({
+    return this.prisma.carrinho.upsert({
       where: { id_usuario },
       update: {},
       create: { id_usuario },
@@ -13,7 +14,7 @@ export class CartRepository {
   }
 
   async findItemInCart(id_carrinho: number, id_estoque: number) {
-    return prisma.carrinhoItem.findFirst({
+    return this.prisma.carrinhoItem.findFirst({
       where: {
         id_carrinho,
         id_estoque,
@@ -22,7 +23,7 @@ export class CartRepository {
   }
 
   async addItem(id_carrinho: number, id_estoque: number, quantidade: number) {
-    return prisma.carrinhoItem.create({
+    return this.prisma.carrinhoItem.create({
       data: {
         id_carrinho,
         id_estoque,
@@ -32,14 +33,14 @@ export class CartRepository {
   }
 
   async updateItemQuantity(id_carrinho_item: number, novaQuantidade: number) {
-    return prisma.carrinhoItem.update({
+    return this.prisma.carrinhoItem.update({
       where: { id_carrinho_item },
       data: { quantidade: novaQuantidade },
     });
   }
 
   async findCartWithDetailsByUserId(id_usuario: number) {
-    return prisma.carrinho.findUnique({
+    return this.prisma.carrinho.findUnique({
       where: { id_usuario },
       include: {
         itens: {

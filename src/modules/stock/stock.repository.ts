@@ -1,14 +1,16 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
 
-const prisma = new PrismaClient();
-
+@Injectable()
 export class StockRepository {
+  constructor(private prisma: PrismaService) {}
   async create(data: Prisma.EstoqueCreateInput) {
-    return prisma.estoque.create({ data });
+    return this.prisma.estoque.create({ data });
   }
 
   async findById(id_estoque: number) {
-    return prisma.estoque.findUnique({
+    return this.prisma.estoque.findUnique({
       where: { id_estoque },
     });
   }
@@ -19,20 +21,20 @@ export class StockRepository {
    * condições (novo/usado) e preços disponíveis.
    */
   async findByBookId(id_livro: number) {
-    return prisma.estoque.findMany({
+    return this.prisma.estoque.findMany({
       where: { id_livro },
     });
   }
 
   async update(id_estoque: number, data: Prisma.EstoqueUpdateInput) {
-    return prisma.estoque.update({
+    return this.prisma.estoque.update({
       where: { id_estoque },
       data,
     });
   }
 
   async delete(id_estoque: number) {
-    return prisma.estoque.delete({
+    return this.prisma.estoque.delete({
       where: { id_estoque },
     });
   }
