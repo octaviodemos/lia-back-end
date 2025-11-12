@@ -21,7 +21,4 @@ export class BookDto {
 
   @ApiProperty({ example: 'https://...', required: false })
   capa_url?: string;
-
-  @ApiProperty({ type: String })
-  created_at!: Date;
 }

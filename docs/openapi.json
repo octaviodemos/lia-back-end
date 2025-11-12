@@ -181,11 +181,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Book detail",
+            "description": "Book detail with stock info",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BookDto"
+                  "$ref": "#/components/schemas/BookDetailDto"
                 }
               }
             }
@@ -213,7 +213,7 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Item added to cart"
           }
         },
         "tags": [
@@ -233,7 +233,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Cart contents"
           }
         },
         "tags": [
@@ -263,7 +263,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Stock item created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -297,7 +304,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Stock item updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -431,15 +445,91 @@
           "capa_url": {
             "type": "string",
             "example": "https://..."
+          }
+        },
+        "required": [
+          "id_livro",
+          "titulo"
+        ]
+      },
+      "StockDto": {
+        "type": "object",
+        "properties": {
+          "id_estoque": {
+            "type": "number",
+            "example": 1
+          },
+          "id_livro": {
+            "type": "number",
+            "example": 1
+          },
+          "quantidade": {
+            "type": "number",
+            "example": 10
+          },
+          "preco": {
+            "type": "number",
+            "example": 49.9
+          },
+          "condicao": {
+            "type": "string",
+            "example": "novo"
           },
           "created_at": {
             "type": "string"
           }
         },
         "required": [
+          "id_estoque",
+          "id_livro",
+          "quantidade",
+          "preco",
+          "created_at"
+        ]
+      },
+      "BookDetailDto": {
+        "type": "object",
+        "properties": {
+          "id_livro": {
+            "type": "number",
+            "example": 1
+          },
+          "titulo": {
+            "type": "string",
+            "example": "O Senhor dos Anéis"
+          },
+          "sinopse": {
+            "type": "string",
+            "example": "Sinopse..."
+          },
+          "editora": {
+            "type": "string",
+            "example": "Editora XYZ"
+          },
+          "ano_publicacao": {
+            "type": "number",
+            "example": 1954
+          },
+          "isbn": {
+            "type": "string",
+            "example": "978-xxx"
+          },
+          "capa_url": {
+            "type": "string",
+            "example": "https://..."
+          },
+          "estoque": {
+            "description": "Stock entries for this book",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockDto"
+            }
+          }
+        },
+        "required": [
           "id_livro",
           "titulo",
-          "created_at"
+          "estoque"
         ]
       },
       "CreateBookDto": {

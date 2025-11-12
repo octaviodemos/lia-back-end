@@ -23,6 +23,9 @@ export class BookRepository {
   async findById(id_livro: number) {
     return this.prisma.livro.findUnique({
       where: { id_livro },
+      include: {
+        estoque: true,  // incluir linhas de estoque relacionadas (preço, condição, quantidade)
+      },
     });
   }
 }
