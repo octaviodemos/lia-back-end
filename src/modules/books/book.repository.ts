@@ -62,4 +62,27 @@ export class BookRepository {
       },
     });
   }
+
+  async findReviewsByBook(id_livro: number) {
+    return this.prisma.avaliacao.findMany({
+      where: { id_livro },
+      orderBy: { data_avaliacao: 'desc' },
+      include: {
+        usuario: { select: { id_usuario: true, nome: true } },
+      },
+    });
+  }
+
+  async createReviewForBook(id_livro: number, id_usuario: number, data: Prisma.AvaliacaoCreateInput) {
+    return this.prisma.avaliacao.create({
+      data: {
+        ...(data as any),
+        id_livro,
+        id_usuario,
+      },
+      include: {
+        usuario: { select: { id_usuario: true, nome: true } },
+      },
+    });
+  }
 }

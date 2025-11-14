@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { BookService } from './book.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,6 +7,8 @@ import { Roles } from '../auth/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BookDto } from './dto/book.dto';
 import { BookDetailDto } from './dto/book-detail.dto';
+import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
+import { AvaliacaoDto } from './dto/avaliacao.dto';
 
 @Controller('books')
 @ApiTags('Books')
@@ -35,6 +37,31 @@ export class BookController {
     } catch (error: any) {
       if (error instanceof HttpException) throw error;
       throw new HttpException('Erro ao buscar livro.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Get(':id/avaliacoes')
+  @ApiOperation({ summary: 'List reviews for a book' })
+  @ApiResponse({ status: 200, description: 'List of reviews', type: () => [AvaliacaoDto] })
+  async getReviews(@Param('id') id: string) {
+    try {
+      return await this.service.getReviews(Number(id));
+    } catch (error: any) {
+      throw new HttpException('Erro ao buscar avaliações.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post(':id/avaliacoes')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a review for a book (authenticated)' })
+  @ApiResponse({ status: 201, description: 'Review created', type: () => AvaliacaoDto })
+  async createReview(@Param('id') id: string, @Body() body: CreateAvaliacaoDto, @Req() req: any) {
+    try {
+      const user = req.user as any;
+      return await this.service.createReview(Number(id), user?.id_usuario || user?.sub || user?.id, body);
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Erro ao criar avaliação.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

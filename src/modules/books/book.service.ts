@@ -64,6 +64,39 @@ export class BookService {
     };
   }
 
+  async getReviews(id_livro: number) {
+    const reviews = await this.repository.findReviewsByBook(id_livro);
+    return (reviews || []).map((r: any) => ({
+      id_avaliacao: r.id_avaliacao,
+      id_livro: r.id_livro,
+      id_usuario: r.id_usuario,
+      nota: r.nota,
+      comentario: r.comentario,
+      data_avaliacao: r.data_avaliacao,
+      usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
+    }));
+  }
+
+  async createReview(id_livro: number, id_usuario: number, dto: { nota: number; comentario?: string }) {
+    const livro = await this.repository.findById(id_livro);
+    if (!livro) throw new NotFoundException('Livro não encontrado.');
+
+    const created = await this.repository.createReviewForBook(id_livro, id_usuario, {
+      nota: dto.nota,
+      comentario: dto.comentario || null,
+    } as any);
+
+    return {
+      id_avaliacao: created.id_avaliacao,
+      id_livro: created.id_livro,
+      id_usuario: created.id_usuario,
+      nota: created.nota,
+      comentario: created.comentario,
+      data_avaliacao: created.data_avaliacao,
+      usuario: created.usuario ? { id_usuario: created.usuario.id_usuario, nome: created.usuario.nome } : undefined,
+    };
+  }
+
    private formatDecimalToPrice(precoRaw: any): string | null {
     if (precoRaw === null || precoRaw === undefined) return null;
     try {

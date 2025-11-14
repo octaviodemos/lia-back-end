@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger(JwtStrategy.name);
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -13,12 +14,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    // Only emit debug logs when explicitly enabled (avoids noisy output in production)
     try {
-      console.debug('[DEBUG] JwtStrategy.validate payload keys:', Object.keys(payload || {}));
-      console.debug('[DEBUG] JwtStrategy.validate sub:', payload?.sub);
+      if (process.env.DEBUG_JWT === 'true') {
+        this.logger.debug('JwtStrategy.validate payload keys: ' + JSON.stringify(Object.keys(payload || {})));
+        this.logger.debug('JwtStrategy.validate sub: ' + payload?.sub);
+      }
     } catch (e) {
+      // swallow any logging errors
     }
-
-    return { userId: payload.sub, email: payload.email };
+   return { id: payload.sub, email: payload.email };
   }
 }

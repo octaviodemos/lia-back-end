@@ -13,28 +13,22 @@ export class CartService {
   constructor(private cartRepository: CartRepository, private stockRepository: StockRepository) {}
 
   async addItem({ id_usuario, id_estoque, quantidade }: IAddItem) {
-    const stockItem = await this.stockRepository.findById(id_estoque);
-    if (!stockItem) {
-      throw new NotFoundException('Item de estoque não encontrado.');
-    }
-    if (stockItem.quantidade < quantidade) {
-      throw new BadRequestException('Quantidade solicitada indisponível no estoque.');
-    }
+  const stockItem = await this.stockRepository.findById(id_estoque);
+    if (!stockItem) throw new NotFoundException('Item de estoque não encontrado.');
+    if (stockItem.quantidade < quantidade) throw new BadRequestException('Quantidade solicitada indisponível no estoque.');
 
     const cart = await this.cartRepository.findOrCreateByUserId(id_usuario);
-
     const existingItem = await this.cartRepository.findItemInCart(cart.id_carrinho, id_estoque);
 
     if (existingItem) {
       const novaQuantidade = existingItem.quantidade + quantidade;
-
       if (stockItem.quantidade < novaQuantidade) {
         throw new BadRequestException('Quantidade total solicitada excede o estoque disponível.');
       }
       return this.cartRepository.updateItemQuantity(existingItem.id_carrinho_item, novaQuantidade);
-    } else {
-      return this.cartRepository.addItem(cart.id_carrinho, id_estoque, quantidade);
     }
+
+    return this.cartRepository.addItem(cart.id_carrinho, id_estoque, quantidade);
   }
 
   async getCart(id_usuario: number) {
