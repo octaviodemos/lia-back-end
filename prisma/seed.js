@@ -27,11 +27,120 @@ async function main() {
   console.log('Created admin user:', created.email);
 }
 
-main()
-  .catch((e) => {
+async function importBooks() {
+  const fs = require('fs');
+  const path = require('path');
+  const dataPath = path.join(__dirname, 'books_br.json');
+  if (!fs.existsSync(dataPath)) {
+    console.log('No books_br.json found, skipping book import');
+    return;
+  }
+
+  const raw = fs.readFileSync(dataPath, 'utf8');
+  const books = JSON.parse(raw);
+
+  for (const b of books) {
+    try {
+      // skip if book with same ISBN exists
+      if (b.isbn) {
+        const existingBook = await prisma.livro.findUnique({ where: { isbn: b.isbn } });
+        if (existingBook) {
+          console.log(`Livro já existe (isbn): ${b.titulo} - ${b.isbn}`);
+          // If there's a new capa_url in JSON and it's different, update it
+          try {
+            const newCover = b.capa_url || null;
+            if (newCover && existingBook.capa_url !== newCover) {
+              await prisma.livro.update({ where: { isbn: b.isbn }, data: { capa_url: newCover } });
+              console.log(`Atualizada capa_url para ${b.titulo}`);
+            }
+
+            // ensure estoque exists for this livro; if none, create it
+            const existingEstoque = await prisma.estoque.findFirst({ where: { id_livro: existingBook.id_livro } });
+            if (!existingEstoque && b.estoque) {
+              const precoDecimal = b.estoque.preco ? b.estoque.preco.toString() : '0.00';
+              await prisma.estoque.create({
+                data: {
+                  id_livro: existingBook.id_livro,
+                  quantidade: b.estoque.quantidade || 1,
+                  preco: precoDecimal,
+                  condicao: b.estoque.condicao || null,
+                },
+              });
+              console.log(`Criado estoque para ${b.titulo}`);
+            }
+          } catch (uErr) {
+            console.error('Erro ao atualizar livro existente', b.titulo, uErr.message || uErr);
+          }
+          continue;
+        }
+      }
+
+      // create livro
+      const createdLivro = await prisma.livro.create({
+        data: {
+          titulo: b.titulo,
+          sinopse: b.sinopse || null,
+          editora: b.editora || null,
+          ano_publicacao: b.ano_publicacao || null,
+          isbn: b.isbn || null,
+          capa_url: b.capa_url || null,
+        },
+      });
+
+      // authors
+      if (Array.isArray(b.autores)) {
+        for (const authorName of b.autores) {
+          let author = await prisma.autor.findFirst({ where: { nome_completo: authorName } });
+          if (!author) {
+            author = await prisma.autor.create({ data: { nome_completo: authorName } });
+          }
+          // link pivot
+          await prisma.livroAutor.create({ data: { id_livro: createdLivro.id_livro, id_autor: author.id_autor } });
+        }
+      }
+
+      // genres
+      if (Array.isArray(b.generos)) {
+        for (const generoName of b.generos) {
+          // Genero.nome is unique in schema, so we can upsert via the name
+          let genero = await prisma.genero.findUnique({ where: { nome: generoName } }).catch(() => null);
+          if (!genero) {
+            genero = await prisma.genero.create({ data: { nome: generoName } });
+          }
+          await prisma.livroGenero.create({ data: { id_livro: createdLivro.id_livro, id_genero: genero.id_genero } });
+        }
+      }
+
+      // estoque
+      if (b.estoque) {
+        const precoDecimal = b.estoque.preco ? b.estoque.preco.toString() : '0.00';
+        await prisma.estoque.create({
+          data: {
+            id_livro: createdLivro.id_livro,
+            quantidade: b.estoque.quantidade || 1,
+            preco: precoDecimal,
+            condicao: b.estoque.condicao || null,
+          },
+        });
+      }
+
+      console.log('Imported livro:', createdLivro.titulo);
+    } catch (err) {
+      console.error('Error importing book', b.titulo, err.message || err);
+    }
+  }
+}
+
+async function runAll() {
+  try {
+    await main();
+    await importBooks();
+  } catch (e) {
     console.error(e);
     process.exit(1);
-  })
-  .finally(async () => {
+  } finally {
     await prisma.$disconnect();
-  });
+  }
+}
+
+runAll();

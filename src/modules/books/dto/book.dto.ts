@@ -21,4 +21,10 @@ export class BookDto {
 
   @ApiProperty({ example: 'https://...', required: false })
   capa_url?: string;
+
+  @ApiProperty({ example: '49.90', required: false })
+  preco?: string;
+
+  @ApiProperty({ example: 1, required: false })
+  id_estoque?: number;
 }

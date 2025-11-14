@@ -1,0 +1,181 @@
+[
+  {
+    "titulo": "Dom Casmurro",
+    "autores": [
+      "Machado de Assis"
+    ],
+    "generos": [
+      "Romance",
+      "Clássico"
+    ],
+    "sinopse": "Narrativa em primeira pessoa sobre amor, ciúme e memória; uma das obras mais estudadas de Machado de Assis.",
+    "editora": "Garnier",
+    "ano_publicacao": 1899,
+    "isbn": "9788572329583",
+  "capa_url": "https://via.placeholder.com/200x300?text=Sem+Capa",
+    "estoque": {
+      "quantidade": 10,
+      "preco": "39.90",
+      "condicao": "usado"
+    }
+  },
+  {
+    "titulo": "Gabriela, Cravo e Canela",
+    "autores": [
+      "Jorge Amado"
+    ],
+    "generos": [
+      "Romance"
+    ],
+    "sinopse": "Romance ambientado em Ilhéus que mistura política, costumes e paixões no Brasil do início do século XX.",
+    "editora": "Companhia das Letras",
+    "ano_publicacao": 1958,
+    "isbn": "9788535907382",
+    "capa_url": "https://books.google.com/books/content?id=hGoVAQAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+    "estoque": {
+      "quantidade": 8,
+      "preco": "44.90",
+      "condicao": "novo"
+    }
+  },
+  {
+    "titulo": "A Hora da Estrela",
+    "autores": [
+      "Clarice Lispector"
+    ],
+    "generos": [
+      "Romance",
+      "Moderno"
+    ],
+    "sinopse": "A história singela e pungente de Macabéa, narrada com ironia e compaixão.",
+    "editora": "Rocco",
+    "ano_publicacao": 1977,
+    "isbn": "9788532510201",
+  "capa_url": "https://via.placeholder.com/200x300?text=Sem+Capa",
+    "estoque": {
+      "quantidade": 5,
+      "preco": "29.90",
+      "condicao": "novo"
+    }
+  },
+  {
+    "titulo": "Vidas Secas",
+    "autores": [
+      "Graciliano Ramos"
+    ],
+    "generos": [
+      "Romance",
+      "Regionalismo"
+    ],
+    "sinopse": "Retrato cru e humano da seca nordestina e da luta pela sobrevivência.",
+    "editora": "Record",
+    "ano_publicacao": 1938,
+    "isbn": "9788525442238",
+    "capa_url": "https://books.google.com/books/content?id=vb70EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+    "estoque": {
+      "quantidade": 6,
+      "preco": "34.90",
+      "condicao": "usado"
+    }
+  },
+  {
+    "titulo": "O Auto da Compadecida",
+    "autores": [
+      "Ariano Suassuna"
+    ],
+    "generos": [
+      "Teatro",
+      "Comédia"
+    ],
+    "sinopse": "Peça que mistura elementos populares e eruditos, marcada pelo humor e crítica social.",
+    "editora": "Objetiva",
+    "ano_publicacao": 1955,
+    "isbn": "9788539001234",
+    "capa_url": "https://books.google.com/books/content?id=YOYEwl5voe4C&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+    "estoque": {
+      "quantidade": 7,
+      "preco": "24.90",
+      "condicao": "novo"
+    }
+  },
+  {
+    "titulo": "Capitães da Areia",
+    "autores": [
+      "Jorge Amado"
+    ],
+    "generos": [
+      "Romance",
+      "Social"
+    ],
+    "sinopse": "Relato sobre um grupo de meninos de rua em Salvador e as dificuldades da infância abandonada.",
+    "editora": "Penguin-Companhia",
+    "ano_publicacao": 1937,
+    "isbn": "9788535920663",
+    "capa_url": "https://books.google.com/books/content?id=hG0VAQAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+    "estoque": {
+      "quantidade": 4,
+      "preco": "32.50",
+      "condicao": "usado"
+    }
+  },
+  {
+    "titulo": "Memórias Póstumas de Brás Cubas",
+    "autores": [
+      "Machado de Assis"
+    ],
+    "generos": [
+      "Romance",
+      "Clássico"
+    ],
+    "sinopse": "Narrador defunto conta suas memórias com ironia e dissolução das convenções realistas.",
+    "editora": "L&PM",
+    "ano_publicacao": 1881,
+    "isbn": "9788525430531",
+    "capa_url": "https://books.google.com/books/content?id=scyQAQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+    "estoque": {
+      "quantidade": 9,
+      "preco": "37.00",
+      "condicao": "novo"
+    }
+  },
+  {
+    "titulo": "O Cortiço",
+    "autores": [
+      "Aluísio Azevedo"
+    ],
+    "generos": [
+      "Romance",
+      "Naturalismo"
+    ],
+    "sinopse": "Retrato coletivista da vida em um cortiço e crítica às condições sociais do século XIX.",
+    "editora": "Martin Claret",
+    "ano_publicacao": 1890,
+    "isbn": "9788526011565",
+    "capa_url": "https://books.google.com/books/content?id=f9g5DAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+    "estoque": {
+      "quantidade": 3,
+      "preco": "28.00",
+      "condicao": "usado"
+    }
+  },
+  {
+    "titulo": "O Guarani",
+    "autores": [
+      "José de Alencar"
+    ],
+    "generos": [
+      "Romance",
+      "Romantismo"
+    ],
+    "sinopse": "Romance indianista e marco do romantismo no Brasil, com temas de heroísmo e amor.",
+    "editora": "Ática",
+    "ano_publicacao": 1857,
+    "isbn": "9788508040347",
+    "capa_url": "https://books.google.com/books/content?id=JhB2g_q3YXAC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+    "estoque": {
+      "quantidade": 2,
+      "preco": "19.90",
+      "condicao": "novo"
+    }
+  }
+]

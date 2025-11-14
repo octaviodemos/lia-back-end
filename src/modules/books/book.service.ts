@@ -18,7 +18,24 @@ export class BookService {
   }
 
   async findAll() {
-    return this.repository.findAll();
+    const books = await this.repository.findAll();
+
+    return (books || []).map((book: any) => {
+      const estoqueArr = book.estoque || [];
+      const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
+
+      return {
+        id_livro: book.id_livro,
+        titulo: book.titulo,
+        sinopse: book.sinopse,
+        editora: book.editora,
+        ano_publicacao: book.ano_publicacao,
+        isbn: book.isbn,
+        capa_url: book.capa_url,
+        preco,
+        id_estoque,
+      };
+    });
   }
 
   async findById(id_livro: number) {
@@ -27,35 +44,13 @@ export class BookService {
       throw new NotFoundException('Livro não encontrado.');
     }
 
-    // `book` agora inclui as linhas relacionadas de `estoque` graças ao include no repositório.
-    // Retorna um único objeto que contém os campos do livro e um array `estoque`
-    // com preco, condicao e quantidade conforme solicitado.
-    const estoque = ((book as any).estoque || []).map((s: any) => {
-      const precoRaw = s.preco;
-      // Convert Prisma Decimal to string with 2 decimal places for safe monetary representation
-      let precoStr: string;
-      try {
-        if (precoRaw && typeof precoRaw === 'object' && typeof precoRaw.toString === 'function') {
-          precoStr = precoRaw.toString();
-        } else {
-          precoStr = String(precoRaw);
-        }
-        // ensure two decimal places when possible
-        const num = Number(precoStr);
-        precoStr = Number.isFinite(num) ? num.toFixed(2) : precoStr;
-      } catch (e) {
-        precoStr = String(precoRaw);
-      }
-
-      return {
-        id_estoque: s.id_estoque,
-        id_livro: s.id_livro,
-        quantidade: s.quantidade,
-        preco: precoStr,
-        condicao: s.condicao,
-        created_at: s.created_at || null,
-      };
-    });
+    const estoque = ((book as any).estoque || []).map((s: any) => ({
+      id_estoque: s.id_estoque,
+      id_livro: s.id_livro,
+      quantidade: s.quantidade,
+      preco: this.formatDecimalToPrice(s.preco),
+      condicao: s.condicao,
+    }));
 
     return {
       id_livro: book.id_livro,
@@ -67,5 +62,41 @@ export class BookService {
       capa_url: book.capa_url,
       estoque,
     };
+  }
+
+   private formatDecimalToPrice(precoRaw: any): string | null {
+    if (precoRaw === null || precoRaw === undefined) return null;
+    try {
+      let precoStr: string;
+      if (typeof precoRaw === 'object' && typeof precoRaw.toString === 'function') {
+        precoStr = precoRaw.toString();
+      } else {
+        precoStr = String(precoRaw);
+      }
+      const num = Number(precoStr);
+      return Number.isFinite(num) ? num.toFixed(2) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  private findLowestPriceInfo(estoqueArr: any[]): { preco: string | null; id_estoque: number | null } {
+    if (!Array.isArray(estoqueArr) || estoqueArr.length === 0) return { preco: null, id_estoque: null };
+
+    let min: number | null = null;
+    let minId: number | null = null;
+
+    for (const s of estoqueArr) {
+      const precoRaw = s && s.preco;
+      const precoStr = this.formatDecimalToPrice(precoRaw);
+      if (precoStr === null) continue;
+      const num = Number(precoStr);
+      if (min === null || num < min) {
+        min = num;
+        minId = s.id_estoque ?? null;
+      }
+    }
+
+    return { preco: min !== null ? min.toFixed(2) : null, id_estoque: minId };
   }
 }
