@@ -7,6 +7,16 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Enable CORS so the frontend (e.g. Angular dev server on localhost:4200)
+  // can perform requests including preflight (OPTIONS).
+  // Adjust CORS_ORIGIN in production as needed.
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
