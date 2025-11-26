@@ -227,6 +227,10 @@ Aqui está uma lista dos principais endpoints disponíveis até o momento.
 -   `GET /`: **(Protegida)** Retorna o conteúdo completo do carrinho do usuário.
 -   `POST /items`: **(Protegida)** Adiciona um item de estoque ao carrinho.
 
+#### Pedidos (`/api/orders`)
+-   `POST /confirm`: **(Protegida)** Confirma o pagamento e finaliza o pedido a partir do carrinho do usuário.
+-   `POST /confirm-test`: **(Dev)** Endpoint de desenvolvimento para preencher carrinho e confirmar pedido diretamente.
+
 ---
 
 ## Licença

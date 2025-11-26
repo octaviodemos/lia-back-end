@@ -20,4 +20,8 @@ export class OrderService {
       throw err;
     }
   }
+
+  async getMyOrders(id_usuario: number) {
+    return this.orderRepository.getMyOrders(id_usuario);
+  }
 }

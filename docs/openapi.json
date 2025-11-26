@@ -318,6 +318,66 @@
           "Stock"
         ]
       }
+    },
+    "/orders/confirm": {
+      "post": {
+        "operationId": "OrderController_confirm",
+        "summary": "Confirm payment and finalize the order from the user cart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order confirmed"
+          }
+        },
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
+    },
+    "/orders/confirm-test": {
+      "post": {
+        "operationId": "OrderController_confirmTest",
+        "summary": "DEV: fill cart and confirm order (dev only)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order confirmed (dev)"
+          }
+        },
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -625,6 +685,23 @@
           "condicao": {
             "type": "string",
             "example": "novo"
+          }
+        }
+      },
+      "ConfirmOrderDto": {
+        "type": "object",
+        "properties": {
+          "id_transacao_gateway": {
+            "type": "string",
+            "example": "txn_123456"
+          },
+          "metodo_pagamento": {
+            "type": "string",
+            "example": "credit_card"
+          },
+          "valor_pago": {
+            "type": "number",
+            "example": 99.9
           }
         }
       }

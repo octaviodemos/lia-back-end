@@ -14,6 +14,24 @@ export class OrderRepository {
     });
   }
 
+  async getMyOrders(id_usuario: number) {
+    return this.prisma.pedido.findMany({
+      where: { id_cliente: id_usuario },
+      select: {
+        id_pedido: true,
+        data_pedido: true,
+        status_pedido: true,
+        itens: {
+          select: {
+            preco_unitario: true,
+            quantidade: true,
+          },
+        },
+      },
+      orderBy: { data_pedido: 'desc' },
+    });
+  }
+
   /**
    * Finalize an order from a user's cart: attempt to decrement stock for all items,
    * create Pedido, ItemPedido and Pagamento, and clear the cart. All inside a transaction.

@@ -26,6 +26,26 @@ export class BookRepository {
         ano_publicacao: true,
         isbn: true,
         capa_url: true,
+        autores: {
+          select: {
+            autor: {
+              select: {
+                id_autor: true,
+                nome_completo: true,
+              },
+            },
+          },
+        },
+        generos: {
+          select: {
+            genero: {
+              select: {
+                id_genero: true,
+                nome: true,
+              },
+            },
+          },
+        },
         estoque: {
           select: {
             id_estoque: true,
@@ -50,6 +70,26 @@ export class BookRepository {
         ano_publicacao: true,
         isbn: true,
         capa_url: true,
+        autores: {
+          select: {
+            autor: {
+              select: {
+                id_autor: true,
+                nome_completo: true,
+              },
+            },
+          },
+        },
+        generos: {
+          select: {
+            genero: {
+              select: {
+                id_genero: true,
+                nome: true,
+              },
+            },
+          },
+        },
         estoque: {
           select: {
             id_estoque: true,

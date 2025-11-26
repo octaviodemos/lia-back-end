@@ -22,6 +22,12 @@ export class BookDto {
   @ApiProperty({ example: 'https://...', required: false })
   capa_url?: string;
 
+  @ApiProperty({ example: [{ id_genero: 1, nome: 'Ficção' }], required: false })
+  generos?: { id_genero: number; nome: string }[];
+
+  @ApiProperty({ example: [{ id_autor: 1, nome_completo: 'J. R. R. Tolkien' }], required: false })
+  autores?: { id_autor: number | null; nome_completo: string }[];
+
   @ApiProperty({ example: '49.90', required: false })
   preco?: string;
 

@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Body, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Body, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrderService } from './order.service';
@@ -6,7 +6,7 @@ import { ConfirmOrderDto } from './dto/confirm-order.dto';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { CartRepository } from '@/modules/cart/cart.repository';
 
-@Controller('pedidos')
+@Controller('orders')
 @ApiTags('Orders')
 @ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
@@ -18,6 +18,12 @@ export class OrderController {
   async confirm(@CurrentUser('id') id_usuario: number, @Body() body: ConfirmOrderDto) {
     const pedido = await this.service.finalizeOrderFromCart(id_usuario, body);
     return { success: true, id_pedido: pedido.id_pedido };
+  }
+
+  @Get('my-orders')
+  @ApiOperation({ summary: 'Get user orders' })
+  async getMyOrders(@CurrentUser('id') id_usuario: number) {
+    return await this.service.getMyOrders(id_usuario);
   }
 
   // Dev helper: create cart with provided items and immediately finalize the order.

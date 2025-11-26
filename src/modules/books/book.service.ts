@@ -24,6 +24,18 @@ export class BookService {
       const estoqueArr = book.estoque || [];
       const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
 
+      const generos = (book.generos || []).map((lg: any) => {
+        if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
+        return null;
+      }).filter(Boolean);
+
+      const autores = (book.autores || []).map((la: any) => {
+        if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
+        return null;
+      }).filter(Boolean);
+
+      const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
+
       return {
         id_livro: book.id_livro,
         titulo: book.titulo,
@@ -34,6 +46,8 @@ export class BookService {
         capa_url: book.capa_url,
         preco,
         id_estoque,
+        generos,
+        autores: autoresFinal,
       };
     });
   }
@@ -52,6 +66,18 @@ export class BookService {
       condicao: s.condicao,
     }));
 
+    const generos = ((book as any).generos || []).map((lg: any) => {
+      if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
+      return null;
+    }).filter(Boolean);
+
+    const autores = ((book as any).autores || []).map((la: any) => {
+      if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
+      return null;
+    }).filter(Boolean);
+
+    const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
+
     return {
       id_livro: book.id_livro,
       titulo: book.titulo,
@@ -61,6 +87,8 @@ export class BookService {
       isbn: book.isbn,
       capa_url: book.capa_url,
       estoque,
+      generos,
+      autores: autoresFinal,
     };
   }
 
