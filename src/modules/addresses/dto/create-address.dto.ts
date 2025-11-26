@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAddressDto {
@@ -17,6 +17,7 @@ export class CreateAddressDto {
 
   @ApiProperty({ example: '01234-567' })
   @IsString()
+  @Matches(/^\d{5}-?\d{3}$/, { message: 'CEP deve ter formato 12345-678 ou 12345678' })
   cep!: string;
 
   @ApiProperty({ example: 'São Paulo' })
@@ -25,5 +26,6 @@ export class CreateAddressDto {
 
   @ApiProperty({ example: 'SP' })
   @IsString()
+  @Matches(/^[A-Z]{2}$/, { message: 'Estado deve ser uma sigla de 2 letras maiúsculas (ex: SP)' })
   estado!: string;
 }
