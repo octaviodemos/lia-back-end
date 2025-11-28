@@ -74,12 +74,11 @@ export class BookController {
   @ApiResponse({ status: 403, description: 'Forbidden - requires admin role' })
   async create(@Body() body: CreateBookDto) {
     try {
+      console.log('[BookController] Dados recebidos:', JSON.stringify(body, null, 2));
       return await this.service.create(body as any);
     } catch (error: any) {
-      try {
-        console.error('[ERROR] BookController.create', error);
-      } catch (e) {
-      }
+      console.error('[ERROR] BookController.create', error);
+      console.error('[ERROR] Stack:', error.stack);
       
       if (error?.code === 'P2002' || (error.message && error.message.includes('ISBN'))) {
         const msg = error.message || 'Conflito de dados (campo único).';

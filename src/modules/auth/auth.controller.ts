@@ -15,7 +15,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Log in and receive a JWT token' })
   @ApiResponse({ status: 200, description: 'JWT token returned' })
   async login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password);
+    const password = body.password || body.senha;
+    if (!password) {
+      throw new Error('Password ou senha é obrigatório');
+    }
+    return this.authService.login(body.email, password);
   }
 
   @Post('register')

@@ -6,7 +6,9 @@ import { BookRepository } from './book.repository';
 export class BookService {
   constructor(private repository: BookRepository) {}
 
-  async create(data: Prisma.LivroCreateInput) {
+  async create(data: any) {
+    console.log('[BookService] Dados recebidos:', JSON.stringify(data, null, 2));
+    
     if (data.isbn) {
       const bookExists = await this.repository.findByIsbn(data.isbn);
       if (bookExists) {
@@ -14,7 +16,19 @@ export class BookService {
       }
     }
 
-    return this.repository.create(data);
+    // Criar dados básicos do livro
+    const livroData: Prisma.LivroCreateInput = {
+      titulo: data.titulo,
+      sinopse: data.sinopse || null,
+      editora: data.editora || null,
+      ano_publicacao: data.ano_publicacao || null,
+      isbn: data.isbn || null,
+      capa_url: data.capa_url || null,
+    };
+
+    console.log('[BookService] Dados formatados para Prisma:', JSON.stringify(livroData, null, 2));
+
+    return this.repository.create(livroData);
   }
 
   async findAll() {
