@@ -1,5 +1,28 @@
 # 📚 LIA Backend - Documentação Completa da API
 
+## 🔔 ATENÇÃO: Campos Decimais
+
+**IMPORTANTE:** Todos os campos do tipo `Decimal` (preços, valores monetários) são retornados como **strings formatadas** com 2 casas decimais.
+
+**Exemplo:**
+```json
+{
+  "preco": "49.90",          // ✅ Correto
+  "preco_unitario": "33.00"  // ✅ Correto
+}
+```
+
+**Campos afetados:**
+- `Estoque.preco` → string "XX.XX"
+- `ItemPedido.preco_unitario` → string "XX.XX"
+- `Pagamento.valor_pago` → string "XX.XX"
+- `Pagamento.taxas_gateway` → string "XX.XX"
+- `OfertaVenda.preco_sugerido` → string "XX.XX"
+
+📖 Para mais detalhes, consulte: [`docs/DECIMAL_FIX.md`](../docs/DECIMAL_FIX.md)
+
+---
+
 ## 📋 Índice
 - [Informações Gerais](#informações-gerais)
 - [Autenticação](#autenticação)
@@ -887,11 +910,13 @@ Adiciona um novo item de estoque para um livro.
   "id_estoque": 10,
   "id_livro": 1,
   "quantidade": 50,
-  "preco": "34.90",
+  "preco": "34.90",      // ⚠️ String formatada, não objeto
   "condicao": "novo",
   "created_at": "2025-11-27T22:30:00.000Z"
 }
 ```
+
+**⚠️ IMPORTANTE:** O campo `preco` é retornado como string `"XX.XX"` com 2 casas decimais, não como objeto Decimal.
 
 ---
 
@@ -914,10 +939,12 @@ Atualiza quantidade ou preço de um item de estoque.
 {
   "id_estoque": 10,
   "quantidade": 45,
-  "preco": "29.90",
+  "preco": "29.90",      // ⚠️ String formatada
   "updated_at": "2025-11-27T22:35:00.000Z"
 }
 ```
+
+**⚠️ IMPORTANTE:** O campo `preco` é retornado como string `"XX.XX"` com 2 casas decimais.
 
 ---
 
