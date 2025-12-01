@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Delete, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { CartService } from './cart.service';
@@ -25,5 +25,22 @@ export class CartController {
   @ApiResponse({ status: 200, description: 'Cart contents' })
   async getCart(@CurrentUser('id') id_usuario: number) {
     return this.service.getCart(id_usuario);
+  }
+
+  @Delete('items/:id')
+  @ApiOperation({ summary: 'Remove an item from the cart' })
+  @ApiResponse({ status: 200, description: 'Item removed from cart' })
+  async removeItem(
+    @Param('id') id_carrinho_item: string,
+    @CurrentUser('id') id_usuario: number
+  ) {
+    return this.service.removeItem(id_usuario, parseInt(id_carrinho_item, 10));
+  }
+
+  @Delete()
+  @ApiOperation({ summary: 'Clear all items from the cart' })
+  @ApiResponse({ status: 200, description: 'Cart cleared' })
+  async clearCart(@CurrentUser('id') id_usuario: number) {
+    return this.service.clearCart(id_usuario);
   }
 }

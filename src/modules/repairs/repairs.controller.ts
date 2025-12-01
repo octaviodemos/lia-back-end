@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Patch, Param, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, UseGuards, Body, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { RepairsService } from './repairs.service';
 import { CreateRepairDto } from './dto/create-repair.dto';
 import { RespondRepairDto } from './dto/respond-repair.dto';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('repairs')
 @ApiTags('Repairs')
@@ -15,8 +19,26 @@ export class RepairsController {
 
   @Post()
   @ApiOperation({ summary: 'Create repair request' })
-  async createRequest(@CurrentUser('id') id_usuario: number, @Body() dto: CreateRepairDto) {
-    return this.service.createRequest(id_usuario, dto);
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        descricao_problema: { type: 'string' },
+        fotos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('fotos', 5))
+  async createRequest(
+    @CurrentUser('id') id_usuario: number,
+    @UploadedFiles() fotos: Express.Multer.File[],
+    @Body() dto: CreateRepairDto,
+  ) {
+    return this.service.createRequest(id_usuario, dto as any, fotos || []);
   }
 
   @Get('my-requests')
@@ -32,8 +54,13 @@ export class RepairsController {
   }
 
   @Patch(':id/respond')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
   @ApiOperation({ summary: 'Respond to repair request (admin)' })
-  async respondToRequest(@Param('id') id: string, @Body() dto: RespondRepairDto) {
+  async respondToRequest(@Param('id') id: string, @Body() body: any) {
+    const dto: RespondRepairDto = {
+      status_solicitacao: body.status_solicitacao ?? body.status,
+    };
     return this.service.respondToRequest(+id, dto);
   }
 }

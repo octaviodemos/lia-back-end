@@ -116,7 +116,13 @@ Crie uma cópia do arquivo de exemplo `.env.example` e renomeie para `.env`.
 ```bash
 cp .env.example .env
 ```
-Em seguida, abra o arquivo `.env` e preencha as variáveis, principalmente a `DATABASE_URL` e o `JWT_SECRET`.
+Em seguida, abra o arquivo `.env` e preencha as variáveis importantes:
+- `DATABASE_URL`: String de conexão com o PostgreSQL
+- `JWT_SECRET`: Chave secreta para assinar tokens JWT
+- `MERCADOPAGO_ACCESS_TOKEN`: Token de acesso do Mercado Pago
+  - Para **testes**: `TEST-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
+  - Para **produção**: `APP_USR-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
+- `FRONTEND_URL` e `BACKEND_URL`: URLs do frontend e backend para configurar redirects
 
 **4. Inicie o banco de dados com Docker:**
 Este comando irá criar e iniciar um contêiner PostgreSQL em segundo plano.
@@ -230,6 +236,32 @@ Aqui está uma lista dos principais endpoints disponíveis até o momento.
 #### Pedidos (`/api/orders`)
 -   `POST /confirm`: **(Protegida)** Confirma o pagamento e finaliza o pedido a partir do carrinho do usuário.
 -   `POST /confirm-test`: **(Dev)** Endpoint de desenvolvimento para preencher carrinho e confirmar pedido diretamente.
+-   `GET /my-orders`: **(Protegida)** Lista os pedidos do usuário logado.
+
+#### Pagamentos (`/api/payments`)
+-   `POST /create`: **(Protegida)** Cria uma preferência de pagamento no Mercado Pago para processar a compra.
+        -   Corpo da requisição:
+                ```json
+                {
+                    "email": "usuario@email.com",
+                    "name": "Nome do Usuário",
+                    "cpf": "000.000.000-00",
+                    "items": [
+                        {
+                            "id": "book_1",
+                            "title": "Nome do Livro",
+                            "quantity": 1,
+                            "unit_price": 49.90,
+                            "description": "Descrição do livro"
+                        }
+                    ],
+                    "order_id": "pedido_123"
+                }
+                ```
+        -   Retorna: `init_point` (URL para checkout do Mercado Pago) e `sandbox_init_point` para testes.
+-   `POST /webhook`: Webhook para receber notificações de status do Mercado Pago (não requer autenticação).
+-   `GET /info/:paymentId`: **(Protegida)** Obtém informações detalhadas de um pagamento específico.
+-   `GET /status/:orderId`: **(Protegida)** Verifica o status de pagamento de um pedido.
 
 ---
 

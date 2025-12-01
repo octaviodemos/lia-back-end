@@ -2,24 +2,44 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import * as bodyParser from 'body-parser';
+import * as express from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { RequestLoggerInterceptor } from './core/middleware/request-logger.interceptor';
-import { DecimalSerializerInterceptor } from './core/middleware/decimal-serializer.interceptor';
+import { DecimalSerializerInterceptor } from './core/interceptors/decimal-serializer.interceptor';
 import { AppModule } from './app';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Disable Nest's default body parser so we can register a raw parser
+  // for the Stripe webhook route before the JSON body parser consumes the stream.
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   // Enable CORS so the frontend (e.g. Angular dev server on localhost:4200)
   // can perform requests including preflight (OPTIONS).
   // Adjust CORS_ORIGIN in production as needed.
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+    origin: [
+      'http://localhost:4200',
+      process.env.CORS_ORIGIN || 'http://localhost:4200'
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
   });
 
   app.setGlobalPrefix('api');
+  app.use('/api/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+
+  const uploadsDir = path.resolve(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  const repairsDir = path.resolve(uploadsDir, 'repairs');
+  if (!fs.existsSync(repairsDir)) fs.mkdirSync(repairsDir, { recursive: true });
+  app.use('/uploads', express.static(uploadsDir));
+
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalInterceptors(
     new RequestLoggerInterceptor(),

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookRepository } from '@/modules/books/book.repository';
 import { StockRepository } from './stock.repository';
+import { DecimalHelper } from '@/shared/utils/decimal.helper';
 import { Prisma } from '@prisma/client';
 
 interface ICreateStockItem {
@@ -39,7 +40,11 @@ export class StockService {
       },
     });
 
-    return stockItem;
+    // Retorna o item criado com preço formatado
+    return {
+      ...stockItem,
+      preco: DecimalHelper.toString(stockItem.preco)
+    };
   }
 
   async update(id_estoque: number, data: Prisma.EstoqueUpdateInput) {
@@ -48,7 +53,11 @@ export class StockService {
       throw new NotFoundException('Item de estoque não encontrado.');
     }
 
-    return this.stockRepository.update(id_estoque, data);
+    const updatedItem = await this.stockRepository.update(id_estoque, data);
+    return {
+      ...updatedItem,
+      preco: DecimalHelper.toString(updatedItem.preco)
+    };
   }
 
 }

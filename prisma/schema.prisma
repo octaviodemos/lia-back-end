@@ -255,7 +255,6 @@ model PublicacaoComentario {
   id_usuario      Int
   conteudo        String   @db.Text
   data_comentario DateTime @default(now())
-
   publicacao Publicacao @relation(fields: [id_publicacao], references: [id_publicacao])
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
 

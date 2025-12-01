@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Body, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Body, BadRequestException, ForbiddenException, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrderService } from './order.service';
@@ -24,6 +24,12 @@ export class OrderController {
   @ApiOperation({ summary: 'Get user orders' })
   async getMyOrders(@CurrentUser('id') id_usuario: number) {
     return await this.service.getMyOrders(id_usuario);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get order details by id' })
+  async getOrderById(@CurrentUser('id') id_usuario: number, @Param('id') id: string) {
+    return await this.service.getOrderById(id_usuario, Number(id));
   }
 
   // Dev helper: create cart with provided items and immediately finalize the order.
