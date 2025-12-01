@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CartRepository } from './cart.repository';
 import { StockRepository } from '@/modules/stock/stock.repository';
+import { DecimalHelper } from '@/shared/utils/decimal.helper';
 
 interface IAddItem {
   id_usuario: number;
@@ -39,14 +40,62 @@ export class CartService {
         id_carrinho: null,
         id_usuario,
         itens: [],
-        total: 0,
+        total: '0.00',
       };
     }
 
+    // Converte preços para strings, inclui dados do livro completos e calcula total
+    const itensFormatted = cart.itens.map(item => {
+      // Formatar autores
+      const autores = item.estoque.livro.autores?.map(la => ({
+        id_autor: la.autor.id_autor,
+        nome_completo: la.autor.nome_completo,
+      })) || [];
+
+      // Formatar gêneros
+      const generos = item.estoque.livro.generos?.map(lg => ({
+        id_genero: lg.genero.id_genero,
+        nome: lg.genero.nome,
+      })) || [];
+
+      return {
+        ...item,
+        estoque: {
+          ...item.estoque,
+          preco: DecimalHelper.toString(item.estoque.preco),
+          livro: {
+            ...item.estoque.livro,
+            autores,
+            generos,
+          },
+        },
+      };
+    });
+
     const total = cart.itens.reduce((acc, item) => {
-      return acc + item.quantidade * Number(item.estoque.preco);
+      return acc + item.quantidade * DecimalHelper.toNumber(item.estoque.preco);
     }, 0);
 
-    return { ...cart, total: total.toFixed(2) };
+    return { 
+      ...cart, 
+      itens: itensFormatted,
+      total: total.toFixed(2) 
+    };
+  }
+
+  async removeItem(_id_usuario: number, id_carrinho_item: number) {
+    // TODO: Adicionar validação para garantir que o item pertence ao usuário
+    // Por enquanto, deletamos diretamente por ID
+    try {
+      await this.cartRepository.removeItem(id_carrinho_item);
+      return { message: 'Item removido do carrinho com sucesso' };
+    } catch (error) {
+      throw new NotFoundException('Item não encontrado no carrinho');
+    }
+  }
+
+  async clearCart(id_usuario: number) {
+    const cart = await this.cartRepository.findOrCreateByUserId(id_usuario);
+    return this.cartRepository.removeAllItems(cart.id_carrinho);
   }
 }

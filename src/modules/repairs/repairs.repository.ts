@@ -7,12 +7,21 @@ import { RespondRepairDto } from './dto/respond-repair.dto';
 export class RepairsRepository {
   constructor(private prisma: PrismaService) {}
 
-  async createRequest(id_usuario: number, dto: CreateRepairDto) {
+  async createRequest(id_usuario: number, dto: CreateRepairDto, fotos: Express.Multer.File[] = []) {
+    const data: any = {
+      ...dto,
+      id_usuario,
+    };
+
+    if (fotos && fotos.length) {
+      data.fotos = {
+        create: fotos.map((f) => ({ url_foto: `/uploads/repairs/${f.filename}` })),
+      };
+    }
+
     return this.prisma.solicitacaoReforma.create({
-      data: {
-        ...dto,
-        id_usuario,
-      },
+      data,
+      include: { fotos: true },
     });
   }
 
@@ -33,6 +42,33 @@ export class RepairsRepository {
     return this.prisma.solicitacaoReforma.findMany({
       orderBy: { data_solicitacao: 'desc' },
     });
+  }
+
+  async findAllAdmin(opts: { page: number; limit: number; status?: string; q?: string; sort?: string }) {
+    const { page, limit, status, q, sort } = opts;
+    const where: any = {};
+    if (status) where.status_solicitacao = status;
+    if (q) where.descricao_problema = { contains: q, mode: 'insensitive' };
+
+    const orderBy: any = {};
+    if (sort === 'oldest') orderBy.data_solicitacao = 'asc';
+    else orderBy.data_solicitacao = 'desc';
+
+    const take = Math.min(100, Math.max(1, limit || 20));
+    const skip = Math.max(0, (Math.max(1, page || 1) - 1) * take);
+
+    const [data, total] = await Promise.all([
+      this.prisma.solicitacaoReforma.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+        include: { fotos: true, usuario: { select: { id_usuario: true, nome: true, email: true } } },
+      }),
+      this.prisma.solicitacaoReforma.count({ where }),
+    ]);
+
+    return { data, total };
   }
 
   async respondToRequest(id_solicitacao: number, dto: RespondRepairDto) {

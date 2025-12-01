@@ -25,6 +25,17 @@ export class OrderRepository {
           select: {
             preco_unitario: true,
             quantidade: true,
+            estoque: {
+              select: {
+                id_estoque: true,
+                livro: {
+                  select: {
+                    id_livro: true,
+                    titulo: true,
+                  }
+                }
+              }
+            }
           },
         },
       },
@@ -58,22 +69,19 @@ export class OrderRepository {
         });
 
         if (updated.count === 0) {
-          // Determine whether item missing or insufficient
           const maybeStock = await tx.estoque.findUnique({ where: { id_estoque } });
           if (!maybeStock) throw new Error(`Item de estoque não encontrado (id_estoque=${id_estoque}).`);
           throw new Error(`Quantidade insuficiente para id_estoque=${id_estoque}.`);
         }
       }
 
-      // Create Pedido
-      const pedido = await tx.pedido.create({
-        data: {
-          id_cliente: id_usuario,
-          status_pedido: 'paid',
-        },
-      });
+      const pedidoData: any = {
+        id_cliente: id_usuario,
+        status_pedido: 'paid',
+      };
 
-      // Create ItemPedido entries (snapshot price from estoque)
+      const pedido = await tx.pedido.create({ data: pedidoData });
+
       const itemsToCreate = cart.itens.map((it) => ({
         id_pedido: pedido.id_pedido,
         id_estoque: it.id_estoque,
@@ -85,7 +93,6 @@ export class OrderRepository {
         await tx.itemPedido.create({ data: it });
       }
 
-      // Create Pagamento record
       await tx.pagamento.create({
         data: {
           id_pedido: pedido.id_pedido,
@@ -97,10 +104,167 @@ export class OrderRepository {
         },
       });
 
-      // Clear cart items
       await tx.carrinhoItem.deleteMany({ where: { id_carrinho: cart.id_carrinho } });
 
       return pedido;
+    });
+  }
+
+  async updateOrderStatusByExternalReference(externalReference: string, status: string) {
+    const pedido = await this.prisma.pedido.findFirst({
+      where: {
+        pagamento: {
+          id_transacao_gateway: externalReference
+        }
+      },
+      include: {
+        pagamento: true
+      }
+    });
+
+    if (!pedido) {
+      throw new Error(`Pedido não encontrado com external_reference: ${externalReference}`);
+    }
+
+    // Atualizar status do pedido
+    const updatedPedido = await this.prisma.pedido.update({
+      where: {
+        id_pedido: pedido.id_pedido
+      },
+      data: {
+        status_pedido: status
+      }
+    });
+
+    // Atualizar status do pagamento também
+    if (pedido.pagamento) {
+      await this.prisma.pagamento.update({
+        where: {
+          id_pagamento: pedido.pagamento.id_pagamento
+        },
+        data: {
+          status_pagamento: status
+        }
+      });
+    }
+
+    return updatedPedido;
+  }
+
+  async getOrderStatusByExternalReference(externalReference: string, userId?: number) {
+    const whereCondition: any = {
+      pagamento: {
+        id_transacao_gateway: externalReference
+      }
+    };
+
+    // Se userId fornecido, filtrar apenas pedidos do usuário
+    if (userId) {
+      whereCondition.id_cliente = userId;
+    }
+
+    const pedido = await this.prisma.pedido.findFirst({
+      where: whereCondition,
+      include: {
+        pagamento: true,
+        cliente: {
+          select: {
+            id_usuario: true,
+            nome: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!pedido) {
+      throw new Error(`Pedido não encontrado com external_reference: ${externalReference}`);
+    }
+
+    return {
+      id_pedido: pedido.id_pedido,
+      status_pedido: pedido.status_pedido,
+      data_pedido: pedido.data_pedido,
+      external_reference: externalReference,
+      pagamento: pedido.pagamento ? {
+        status_pagamento: pedido.pagamento.status_pagamento,
+        metodo_pagamento: pedido.pagamento.metodo_pagamento,
+        valor_pago: pedido.pagamento.valor_pago
+      } : null,
+      cliente: pedido.cliente
+    };
+  }
+
+  async findById(id_pedido: number, id_usuario?: number) {
+    const whereCondition: any = { id_pedido };
+    if (id_usuario) whereCondition.id_cliente = id_usuario;
+
+    return this.prisma.pedido.findFirst({
+      where: whereCondition,
+      include: {
+        itens: {
+          include: {
+            estoque: {
+              include: {
+                livro: true,
+              },
+            },
+          },
+        },
+        pagamento: true,
+        cliente: {
+          select: { id_usuario: true, nome: true, email: true },
+        },
+      },
+    });
+  }
+
+  async findAndCountAdmin(opts: { page: number; limit: number; status?: string; q?: string; sort?: string }) {
+    const { page, limit, status, q, sort } = opts;
+
+    const where: any = {};
+    if (status) where.status_pedido = status;
+
+    if (q) {
+      const qNum = Number(q);
+      const or: any[] = [];
+      if (!isNaN(qNum)) or.push({ id_pedido: qNum });
+      or.push({ cliente: { nome: { contains: q, mode: 'insensitive' } } });
+      or.push({ cliente: { email: { contains: q, mode: 'insensitive' } } });
+      where.OR = or;
+    }
+
+    // sort parsing: expected like 'data_pedido:desc' or 'data_pedido:asc'
+    let orderBy: any = { data_pedido: 'desc' };
+    if (sort) {
+      const [field, dir] = sort.split(':');
+      if (field && dir && (dir === 'asc' || dir === 'desc')) {
+        orderBy = { [field]: dir };
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.pedido.findMany({
+        where,
+        include: {
+          itens: { include: { estoque: { include: { livro: true } } } },
+          pagamento: true,
+          cliente: { select: { id_usuario: true, nome: true, email: true } },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy,
+      }),
+      this.prisma.pedido.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  async updateStatusById(id_pedido: number, status: string) {
+    return this.prisma.pedido.update({
+      where: { id_pedido },
+      data: { status_pedido: status },
     });
   }
 }

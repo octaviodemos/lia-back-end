@@ -1,0 +1,2889 @@
+diff --git a/.env b/.env
+deleted file mode 100644
+index b91686b..0000000
+--- a/.env
++++ /dev/null
+@@ -1,9 +0,0 @@
+-DB_USER=postgres
+-DB_HOST=localhost
+-DB_DATABASE=lia_db
+-DB_PASSWORD=462676
+-DB_PORT=5432
+-
+-
+-DATABASE_URL=postgresql://postgres:462676@localhost:5432/lia_db?schema=public
+-JWT_SECRET=segredo-muito-forte-do-lia-app
+\ No newline at end of file
+diff --git a/README.md b/README.md
+index 057e5dd..0f9fd3f 100644
+--- a/README.md
++++ b/README.md
+@@ -116,7 +116,13 @@ Crie uma cópia do arquivo de exemplo `.env.example` e renomeie para `.env`.
+ ```bash
+ cp .env.example .env
+ ```
+-Em seguida, abra o arquivo `.env` e preencha as variáveis, principalmente a `DATABASE_URL` e o `JWT_SECRET`.
++Em seguida, abra o arquivo `.env` e preencha as variáveis importantes:
++- `DATABASE_URL`: String de conexão com o PostgreSQL
++- `JWT_SECRET`: Chave secreta para assinar tokens JWT
++- `MERCADOPAGO_ACCESS_TOKEN`: Token de acesso do Mercado Pago
++  - Para **testes**: `TEST-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
++  - Para **produção**: `APP_USR-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
++- `FRONTEND_URL` e `BACKEND_URL`: URLs do frontend e backend para configurar redirects
+ 
+ **4. Inicie o banco de dados com Docker:**
+ Este comando irá criar e iniciar um contêiner PostgreSQL em segundo plano.
+@@ -230,6 +236,32 @@ Aqui está uma lista dos principais endpoints disponíveis até o momento.
+ #### Pedidos (`/api/orders`)
+ -   `POST /confirm`: **(Protegida)** Confirma o pagamento e finaliza o pedido a partir do carrinho do usuário.
+ -   `POST /confirm-test`: **(Dev)** Endpoint de desenvolvimento para preencher carrinho e confirmar pedido diretamente.
++-   `GET /my-orders`: **(Protegida)** Lista os pedidos do usuário logado.
++
++#### Pagamentos (`/api/payments`)
++-   `POST /create`: **(Protegida)** Cria uma preferência de pagamento no Mercado Pago para processar a compra.
++        -   Corpo da requisição:
++                ```json
++                {
++                    "email": "usuario@email.com",
++                    "name": "Nome do Usuário",
++                    "cpf": "000.000.000-00",
++                    "items": [
++                        {
++                            "id": "book_1",
++                            "title": "Nome do Livro",
++                            "quantity": 1,
++                            "unit_price": 49.90,
++                            "description": "Descrição do livro"
++                        }
++                    ],
++                    "order_id": "pedido_123"
++                }
++                ```
++        -   Retorna: `init_point` (URL para checkout do Mercado Pago) e `sandbox_init_point` para testes.
++-   `POST /webhook`: Webhook para receber notificações de status do Mercado Pago (não requer autenticação).
++-   `GET /info/:paymentId`: **(Protegida)** Obtém informações detalhadas de um pagamento específico.
++-   `GET /status/:orderId`: **(Protegida)** Verifica o status de pagamento de um pedido.
+ 
+ ---
+ 
+diff --git a/API_DOCUMENTATION.md b/docs/API_DOCUMENTATION.md
+similarity index 100%
+rename from API_DOCUMENTATION.md
+rename to docs/API_DOCUMENTATION.md
+diff --git a/FRONTEND_INTEGRATION.md b/docs/FRONTEND_INTEGRATION.md
+similarity index 100%
+rename from FRONTEND_INTEGRATION.md
+rename to docs/FRONTEND_INTEGRATION.md
+diff --git a/node_modules/.package-lock.json b/node_modules/.package-lock.json
+index 51a3b3e..5dd97c9 100644
+--- a/node_modules/.package-lock.json
++++ b/node_modules/.package-lock.json
+@@ -1569,6 +1569,33 @@
+         }
+       }
+     },
++    "node_modules/@nestjs/config": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/@nestjs/config/-/config-4.0.2.tgz",
++      "integrity": "sha512-McMW6EXtpc8+CwTUwFdg6h7dYcBUpH5iUILCclAsa+MbCEvC9ZKu4dCHRlJqALuhjLw97pbQu62l4+wRwGeZqA==",
++      "license": "MIT",
++      "dependencies": {
++        "dotenv": "16.4.7",
++        "dotenv-expand": "12.0.1",
++        "lodash": "4.17.21"
++      },
++      "peerDependencies": {
++        "@nestjs/common": "^10.0.0 || ^11.0.0",
++        "rxjs": "^7.1.0"
++      }
++    },
++    "node_modules/@nestjs/config/node_modules/dotenv": {
++      "version": "16.4.7",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-16.4.7.tgz",
++      "integrity": "sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/@nestjs/core": {
+       "version": "10.4.20",
+       "resolved": "https://registry.npmjs.org/@nestjs/core/-/core-10.4.20.tgz",
+@@ -2547,6 +2574,16 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/multer": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/@types/multer/-/multer-2.0.0.tgz",
++      "integrity": "sha512-C3Z9v9Evij2yST3RSBktxP9STm6OdMc5uR1xF1SGr98uv8dUlAL2hqwrZ3GVB3uyMyiegnscEK6PGtYvNrjTjw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/express": "*"
++      }
++    },
+     "node_modules/@types/node": {
+       "version": "24.6.2",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-24.6.2.tgz",
+@@ -4052,6 +4089,33 @@
+         "url": "https://dotenvx.com"
+       }
+     },
++    "node_modules/dotenv-expand": {
++      "version": "12.0.1",
++      "resolved": "https://registry.npmjs.org/dotenv-expand/-/dotenv-expand-12.0.1.tgz",
++      "integrity": "sha512-LaKRbou8gt0RNID/9RoI+J2rvXsBRPMV7p+ElHlPhcSARbCPDYcYG2s1TIzAfWv4YSgyY5taidWzzs31lNV3yQ==",
++      "license": "BSD-2-Clause",
++      "dependencies": {
++        "dotenv": "^16.4.5"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
++    "node_modules/dotenv-expand/node_modules/dotenv": {
++      "version": "16.6.1",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-16.6.1.tgz",
++      "integrity": "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/dunder-proto": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+@@ -6641,15 +6705,6 @@
+         "node": ">= 0.8"
+       }
+     },
+-    "node_modules/mercadopago": {
+-      "version": "2.9.0",
+-      "resolved": "https://registry.npmjs.org/mercadopago/-/mercadopago-2.9.0.tgz",
+-      "integrity": "sha512-C7iqIxeDjlSVmvNSJlTbzlxmNkOxPG0g9iQyIA03T05Y+AK8bIwRZ0Nr/VDmGyhSov76y1oOP0ZuDafs9c8B5Q==",
+-      "dependencies": {
+-        "node-fetch": "^2.7.0",
+-        "uuid": "^9.0.0"
+-      }
+-    },
+     "node_modules/merge-descriptors": {
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+@@ -8332,6 +8387,19 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/stripe": {
++      "version": "12.18.0",
++      "resolved": "https://registry.npmjs.org/stripe/-/stripe-12.18.0.tgz",
++      "integrity": "sha512-cYjgBM2SY/dTm8Lr6eMyyONaHTZHA/QjHxFUIW5WH8FevSRIGAVtXEmBkUXF1fsqe7QvvRgQSGSJZmjDacegGg==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": ">=8.1.0",
++        "qs": "^6.11.0"
++      },
++      "engines": {
++        "node": ">=12.*"
++      }
++    },
+     "node_modules/strtok3": {
+       "version": "10.3.4",
+       "resolved": "https://registry.npmjs.org/strtok3/-/strtok3-10.3.4.tgz",
+@@ -8993,19 +9061,6 @@
+         "node": ">= 0.4.0"
+       }
+     },
+-    "node_modules/uuid": {
+-      "version": "9.0.1",
+-      "resolved": "https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz",
+-      "integrity": "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==",
+-      "funding": [
+-        "https://github.com/sponsors/broofa",
+-        "https://github.com/sponsors/ctavan"
+-      ],
+-      "license": "MIT",
+-      "bin": {
+-        "uuid": "dist/bin/uuid"
+-      }
+-    },
+     "node_modules/v8-compile-cache-lib": {
+       "version": "3.0.1",
+       "resolved": "https://registry.npmjs.org/v8-compile-cache-lib/-/v8-compile-cache-lib-3.0.1.tgz",
+diff --git a/package-lock.json b/package-lock.json
+index 515076a..7bcb827 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -10,6 +10,7 @@
+       "license": "ISC",
+       "dependencies": {
+         "@nestjs/common": "^10.3.0",
++        "@nestjs/config": "^4.0.2",
+         "@nestjs/core": "^10.3.0",
+         "@nestjs/jwt": "^10.0.0",
+         "@nestjs/passport": "^10.0.0",
+@@ -23,12 +24,12 @@
+         "dotenv": "^17.2.3",
+         "helmet": "^8.1.0",
+         "jsonwebtoken": "^9.0.2",
+-        "mercadopago": "^2.9.0",
+         "passport": "^0.7.0",
+         "passport-jwt": "^4.0.1",
+         "pg": "^8.16.3",
+         "reflect-metadata": "^0.1.13",
+         "rxjs": "^7.8.1",
++        "stripe": "^12.12.0",
+         "swagger-jsdoc": "^6.2.8",
+         "swagger-ui-express": "^5.0.1"
+       },
+@@ -38,6 +39,7 @@
+         "@types/express": "^5.0.3",
+         "@types/jest": "^30.0.0",
+         "@types/jsonwebtoken": "^9.0.10",
++        "@types/multer": "^2.0.0",
+         "@types/node": "^24.6.2",
+         "@types/passport": "^1.0.17",
+         "@types/passport-jwt": "^4.0.1",
+@@ -1671,6 +1673,33 @@
+         }
+       }
+     },
++    "node_modules/@nestjs/config": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/@nestjs/config/-/config-4.0.2.tgz",
++      "integrity": "sha512-McMW6EXtpc8+CwTUwFdg6h7dYcBUpH5iUILCclAsa+MbCEvC9ZKu4dCHRlJqALuhjLw97pbQu62l4+wRwGeZqA==",
++      "license": "MIT",
++      "dependencies": {
++        "dotenv": "16.4.7",
++        "dotenv-expand": "12.0.1",
++        "lodash": "4.17.21"
++      },
++      "peerDependencies": {
++        "@nestjs/common": "^10.0.0 || ^11.0.0",
++        "rxjs": "^7.1.0"
++      }
++    },
++    "node_modules/@nestjs/config/node_modules/dotenv": {
++      "version": "16.4.7",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-16.4.7.tgz",
++      "integrity": "sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/@nestjs/core": {
+       "version": "10.4.20",
+       "resolved": "https://registry.npmjs.org/@nestjs/core/-/core-10.4.20.tgz",
+@@ -2660,6 +2689,16 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/multer": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/@types/multer/-/multer-2.0.0.tgz",
++      "integrity": "sha512-C3Z9v9Evij2yST3RSBktxP9STm6OdMc5uR1xF1SGr98uv8dUlAL2hqwrZ3GVB3uyMyiegnscEK6PGtYvNrjTjw==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@types/express": "*"
++      }
++    },
+     "node_modules/@types/node": {
+       "version": "24.6.2",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-24.6.2.tgz",
+@@ -4420,6 +4459,33 @@
+         "url": "https://dotenvx.com"
+       }
+     },
++    "node_modules/dotenv-expand": {
++      "version": "12.0.1",
++      "resolved": "https://registry.npmjs.org/dotenv-expand/-/dotenv-expand-12.0.1.tgz",
++      "integrity": "sha512-LaKRbou8gt0RNID/9RoI+J2rvXsBRPMV7p+ElHlPhcSARbCPDYcYG2s1TIzAfWv4YSgyY5taidWzzs31lNV3yQ==",
++      "license": "BSD-2-Clause",
++      "dependencies": {
++        "dotenv": "^16.4.5"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
++    "node_modules/dotenv-expand/node_modules/dotenv": {
++      "version": "16.6.1",
++      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-16.6.1.tgz",
++      "integrity": "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==",
++      "license": "BSD-2-Clause",
++      "engines": {
++        "node": ">=12"
++      },
++      "funding": {
++        "url": "https://dotenvx.com"
++      }
++    },
+     "node_modules/dunder-proto": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+@@ -7024,15 +7090,6 @@
+         "node": ">= 0.8"
+       }
+     },
+-    "node_modules/mercadopago": {
+-      "version": "2.9.0",
+-      "resolved": "https://registry.npmjs.org/mercadopago/-/mercadopago-2.9.0.tgz",
+-      "integrity": "sha512-C7iqIxeDjlSVmvNSJlTbzlxmNkOxPG0g9iQyIA03T05Y+AK8bIwRZ0Nr/VDmGyhSov76y1oOP0ZuDafs9c8B5Q==",
+-      "dependencies": {
+-        "node-fetch": "^2.7.0",
+-        "uuid": "^9.0.0"
+-      }
+-    },
+     "node_modules/merge-descriptors": {
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/merge-descriptors/-/merge-descriptors-2.0.0.tgz",
+@@ -8715,6 +8772,19 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/stripe": {
++      "version": "12.18.0",
++      "resolved": "https://registry.npmjs.org/stripe/-/stripe-12.18.0.tgz",
++      "integrity": "sha512-cYjgBM2SY/dTm8Lr6eMyyONaHTZHA/QjHxFUIW5WH8FevSRIGAVtXEmBkUXF1fsqe7QvvRgQSGSJZmjDacegGg==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/node": ">=8.1.0",
++        "qs": "^6.11.0"
++      },
++      "engines": {
++        "node": ">=12.*"
++      }
++    },
+     "node_modules/strtok3": {
+       "version": "10.3.4",
+       "resolved": "https://registry.npmjs.org/strtok3/-/strtok3-10.3.4.tgz",
+@@ -9376,19 +9446,6 @@
+         "node": ">= 0.4.0"
+       }
+     },
+-    "node_modules/uuid": {
+-      "version": "9.0.1",
+-      "resolved": "https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz",
+-      "integrity": "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==",
+-      "funding": [
+-        "https://github.com/sponsors/broofa",
+-        "https://github.com/sponsors/ctavan"
+-      ],
+-      "license": "MIT",
+-      "bin": {
+-        "uuid": "dist/bin/uuid"
+-      }
+-    },
+     "node_modules/v8-compile-cache-lib": {
+       "version": "3.0.1",
+       "resolved": "https://registry.npmjs.org/v8-compile-cache-lib/-/v8-compile-cache-lib-3.0.1.tgz",
+diff --git a/package.json b/package.json
+index 3570ef3..f6a3e24 100644
+--- a/package.json
++++ b/package.json
+@@ -5,9 +5,9 @@
+   "scripts": {
+     "build": "tsc",
+     "start": "node dist/main.js",
+-  "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only --ignore-watch node_modules src/main.ts",
++    "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only --ignore-watch node_modules src/main.ts",
+     "seed": "node prisma/seed.js",
+-  "generate:swagger": "npm run build && node -r tsconfig-paths/register dist/swagger/generator.js",
++    "generate:swagger": "npm run build && node -r tsconfig-paths/register dist/swagger/generator.js",
+     "generate:swagger:dev": "ts-node-dev -r tsconfig-paths/register --transpile-only src/swagger/generator.ts",
+     "test": "jest",
+     "lint": "eslint src --ext .ts",
+@@ -20,6 +20,7 @@
+   "description": "LIA: Marketplace de livros desenvolvido para a disciplina de Projeto Integrador. Stack: Node.js, Angular e PostgreSQL",
+   "dependencies": {
+     "@nestjs/common": "^10.3.0",
++    "@nestjs/config": "^4.0.2",
+     "@nestjs/core": "^10.3.0",
+     "@nestjs/jwt": "^10.0.0",
+     "@nestjs/passport": "^10.0.0",
+@@ -33,12 +34,12 @@
+     "dotenv": "^17.2.3",
+     "helmet": "^8.1.0",
+     "jsonwebtoken": "^9.0.2",
+-    "mercadopago": "^2.9.0",
+     "passport": "^0.7.0",
+     "passport-jwt": "^4.0.1",
+     "pg": "^8.16.3",
+     "reflect-metadata": "^0.1.13",
+     "rxjs": "^7.8.1",
++    "stripe": "^12.12.0",
+     "swagger-jsdoc": "^6.2.8",
+     "swagger-ui-express": "^5.0.1"
+   },
+@@ -48,6 +49,7 @@
+     "@types/express": "^5.0.3",
+     "@types/jest": "^30.0.0",
+     "@types/jsonwebtoken": "^9.0.10",
++    "@types/multer": "^2.0.0",
+     "@types/node": "^24.6.2",
+     "@types/passport": "^1.0.17",
+     "@types/passport-jwt": "^4.0.1",
+diff --git a/prisma/migrations/20251130221924_add_pedido_valor_total/migration.sql b/prisma/migrations/20251130221924_add_pedido_valor_total/migration.sql
+new file mode 100644
+index 0000000..8160d40
+--- /dev/null
++++ b/prisma/migrations/20251130221924_add_pedido_valor_total/migration.sql
+@@ -0,0 +1,2 @@
++-- AlterTable
++ALTER TABLE "pedidos" ADD COLUMN     "valor_total" DECIMAL(10,2);
+diff --git a/prisma/migrations/20251130223615_remove_pedido_valor_total/migration.sql b/prisma/migrations/20251130223615_remove_pedido_valor_total/migration.sql
+new file mode 100644
+index 0000000..624af1f
+--- /dev/null
++++ b/prisma/migrations/20251130223615_remove_pedido_valor_total/migration.sql
+@@ -0,0 +1,8 @@
++/*
++  Warnings:
++
++  - You are about to drop the column `valor_total` on the `pedidos` table. All the data in the column will be lost.
++
++*/
++-- AlterTable
++ALTER TABLE "pedidos" DROP COLUMN "valor_total";
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 77dc6b6..0532b7c 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -255,7 +255,6 @@ model PublicacaoComentario {
+   id_usuario      Int
+   conteudo        String   @db.Text
+   data_comentario DateTime @default(now())
+-
+   publicacao Publicacao @relation(fields: [id_publicacao], references: [id_publicacao])
+   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
+ 
+diff --git a/src/app.ts b/src/app.ts
+index 2631ddb..7a0692e 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,4 +1,5 @@
+ import { Module } from '@nestjs/common';
++import { ConfigModule } from '@nestjs/config';
+ import { PrismaModule } from './prisma/prisma.module';
+ import { SharedModule } from './shared/shared.module';
+ import { UsersModule } from './modules/users/users.module';
+@@ -10,10 +11,16 @@ import { OrdersModule } from './modules/orders/orders.module';
+ import { AddressesModule } from './modules/addresses/addresses.module';
+ import { OffersModule } from './modules/offers/offers.module';
+ import { RepairsModule } from './modules/repairs/repairs.module';
++import { RequestsModule } from './modules/requests/requests.module';
+ import { UtilsModule } from './modules/utils/utils.module';
++import { PaymentModule } from './modules/payments/payment.module';
++import { PublicationsModule } from './modules/publications/publications.module';
+ 
+ @Module({
+   imports: [
++    ConfigModule.forRoot({
++      isGlobal: true,
++    }),
+     PrismaModule,
+     SharedModule, 
+     UsersModule, 
+@@ -25,7 +32,10 @@ import { UtilsModule } from './modules/utils/utils.module';
+     AddressesModule,
+     OffersModule,
+     RepairsModule,
+-    UtilsModule
++    RequestsModule,
++    PublicationsModule,
++    UtilsModule,
++    PaymentModule
+   ],
+ })
+ export class AppModule {}
+diff --git a/src/core/interceptors/decimal-serializer.interceptor.ts b/src/core/interceptors/decimal-serializer.interceptor.ts
+new file mode 100644
+index 0000000..d9382d3
+--- /dev/null
++++ b/src/core/interceptors/decimal-serializer.interceptor.ts
+@@ -0,0 +1,78 @@
++import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
++import { Observable } from 'rxjs';
++import { map } from 'rxjs/operators';
++
++function isPrismaDecimalLike(obj: any) {
++  return (
++    obj && typeof obj === 'object' &&
++    Array.isArray(obj.d) && typeof obj.e === 'number' && typeof obj.s === 'number'
++  );
++}
++
++function decimalLikeToNumber(obj: any): number | null {
++  try {
++    // Heuristic: obj.d is an array of digit groups. Most common serialization from Decimal
++    // appears as e.g. { d: [49,9000000], e: 1, s: 1 } which we interpret as 49.9000000
++    if (!Array.isArray(obj.d) || obj.d.length === 0) return null;
++
++    const sign = obj.s === -1 ? -1 : 1;
++    const intPart = String(obj.d[0]);
++    const fracPart = obj.d.length > 1 ? obj.d.slice(1).join('') : '';
++    const text = fracPart ? `${intPart}.${fracPart}` : intPart;
++    const n = Number(text);
++    return Number.isFinite(n) ? sign * n : null;
++  } catch {
++    return null;
++  }
++}
++
++function convertDecimals(obj: any): any {
++  if (obj === null || obj === undefined) return obj;
++
++  if (Array.isArray(obj)) return obj.map(convertDecimals);
++  if (typeof obj !== 'object') return obj;
++
++  // Preserve Dates, Buffers and other non-plain objects (they should not be recursed)
++  if (obj instanceof Date) return obj;
++  if (typeof Buffer !== 'undefined' && obj instanceof Buffer) return obj;
++
++  // If object has a non-plain constructor (not a plain Object) and it's not a Decimal-like,
++  // avoid recursing into it (prevents emptying Date and other instances).
++  const ctorName = obj.constructor?.name;
++  if (ctorName && ctorName !== 'Object' && typeof obj.toNumber !== 'function' && !isPrismaDecimalLike(obj)) {
++    return obj;
++  }
++
++  // If object exposes toNumber (Prisma Decimal instance), use it
++  if (typeof obj.toNumber === 'function') {
++    try {
++      return obj.toNumber();
++    } catch {
++      try {
++        return Number(obj.toString());
++      } catch {
++        return obj;
++      }
++    }
++  }
++
++  // If object matches {d,e,s} structure, try to reconstruct numeric value
++  if (isPrismaDecimalLike(obj)) {
++    const val = decimalLikeToNumber(obj);
++    if (val !== null) return val;
++  }
++
++  // Recurse into keys
++  const out: any = {};
++  for (const k of Object.keys(obj)) {
++    out[k] = convertDecimals(obj[k]);
++  }
++  return out;
++}
++
++@Injectable()
++export class DecimalSerializerInterceptor implements NestInterceptor {
++  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
++    return next.handle().pipe(map((data) => convertDecimals(data)));
++  }
++}
+diff --git a/src/core/middleware/decimal-serializer.interceptor.ts b/src/core/middleware/decimal-serializer.interceptor.ts
+deleted file mode 100644
+index 6698108..0000000
+--- a/src/core/middleware/decimal-serializer.interceptor.ts
++++ /dev/null
+@@ -1,95 +0,0 @@
+-import {
+-  Injectable,
+-  NestInterceptor,
+-  ExecutionContext,
+-  CallHandler,
+-} from '@nestjs/common';
+-import { Observable } from 'rxjs';
+-import { map } from 'rxjs/operators';
+-import { Prisma } from '@prisma/client';
+-
+-/**
+- * Interceptor que converte todos os campos do tipo Decimal do Prisma
+- * para strings antes de enviar a resposta ao cliente.
+- * 
+- * Isso resolve o problema de serialização onde o PostgreSQL Decimal
+- * é convertido para objetos complexos como {"s": 1, "e": 1, "d": [33]}
+- */
+-@Injectable()
+-export class DecimalSerializerInterceptor implements NestInterceptor {
+-  intercept(_context: ExecutionContext, next: CallHandler): Observable<any> {
+-    return next.handle().pipe(map((data) => this.convertDecimals(data)));
+-  }
+-
+-  /**
+-   * Converte recursivamente todos os objetos Decimal para strings
+-   */
+-  private convertDecimals(data: any): any {
+-    if (data === null || data === undefined) {
+-      return data;
+-    }
+-
+-    // Se for um Decimal do Prisma, converte para string
+-    if (data instanceof Prisma.Decimal || this.isDecimalObject(data)) {
+-      return this.decimalToString(data);
+-    }
+-
+-    // Se for um array, processa cada item
+-    if (Array.isArray(data)) {
+-      return data.map((item) => this.convertDecimals(item));
+-    }
+-
+-    // Se for um objeto, processa cada propriedade
+-    if (typeof data === 'object') {
+-      const converted: any = {};
+-      for (const key in data) {
+-        if (data.hasOwnProperty(key)) {
+-          converted[key] = this.convertDecimals(data[key]);
+-        }
+-      }
+-      return converted;
+-    }
+-
+-    // Tipos primitivos retornam como estão
+-    return data;
+-  }
+-
+-  /**
+-   * Verifica se um objeto é um Decimal do Prisma
+-   * (tem a estrutura interna {s, e, d})
+-   */
+-  private isDecimalObject(obj: any): boolean {
+-    return (
+-      typeof obj === 'object' &&
+-      obj !== null &&
+-      's' in obj &&
+-      'e' in obj &&
+-      'd' in obj &&
+-      Array.isArray(obj.d)
+-    );
+-  }
+-
+-  /**
+-   * Converte Decimal para string formatada com 2 casas decimais
+-   */
+-  private decimalToString(decimal: any): string {
+-    try {
+-      // Se for uma instância de Decimal do Prisma
+-      if (decimal instanceof Prisma.Decimal) {
+-        return decimal.toFixed(2);
+-      }
+-      
+-      // Se for um objeto com estrutura de Decimal
+-      if (this.isDecimalObject(decimal)) {
+-        // Reconstrói o Decimal a partir do objeto
+-        const d = new Prisma.Decimal(decimal);
+-        return d.toFixed(2);
+-      }
+-
+-      return '0.00';
+-    } catch (error) {
+-      console.error('Erro ao converter Decimal:', error);
+-      return '0.00';
+-    }
+-  }
+-}
+diff --git a/src/main.ts b/src/main.ts
+index a8e18ce..6ff1f55 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -2,24 +2,44 @@ import 'reflect-metadata';
+ import { NestFactory } from '@nestjs/core';
+ import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
+ import { Reflector } from '@nestjs/core';
++import * as bodyParser from 'body-parser';
++import * as express from 'express';
++import * as path from 'path';
++import * as fs from 'fs';
+ import { RequestLoggerInterceptor } from './core/middleware/request-logger.interceptor';
+-import { DecimalSerializerInterceptor } from './core/middleware/decimal-serializer.interceptor';
++import { DecimalSerializerInterceptor } from './core/interceptors/decimal-serializer.interceptor';
+ import { AppModule } from './app';
+ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+ 
+ async function bootstrap() {
+-  const app = await NestFactory.create(AppModule);
++  // Disable Nest's default body parser so we can register a raw parser
++  // for the Stripe webhook route before the JSON body parser consumes the stream.
++  const app = await NestFactory.create(AppModule, { bodyParser: false });
+   // Enable CORS so the frontend (e.g. Angular dev server on localhost:4200)
+   // can perform requests including preflight (OPTIONS).
+   // Adjust CORS_ORIGIN in production as needed.
+   app.enableCors({
+-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
++    origin: [
++      'http://localhost:4200',
++      process.env.CORS_ORIGIN || 'http://localhost:4200'
++    ],
+     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+     allowedHeaders: 'Content-Type, Authorization',
+     credentials: true,
+   });
+ 
+   app.setGlobalPrefix('api');
++  app.use('/api/payments/webhook', bodyParser.raw({ type: 'application/json' }));
++
++  const uploadsDir = path.resolve(process.cwd(), 'uploads');
++  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
++  const repairsDir = path.resolve(uploadsDir, 'repairs');
++  if (!fs.existsSync(repairsDir)) fs.mkdirSync(repairsDir, { recursive: true });
++  app.use('/uploads', express.static(uploadsDir));
++
++  app.use(bodyParser.json());
++  app.use(bodyParser.urlencoded({ extended: true }));
++
+   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+   app.useGlobalInterceptors(
+     new RequestLoggerInterceptor(),
+diff --git a/src/modules/books/admin-reviews.controller.ts b/src/modules/books/admin-reviews.controller.ts
+new file mode 100644
+index 0000000..36bcbc1
+--- /dev/null
++++ b/src/modules/books/admin-reviews.controller.ts
+@@ -0,0 +1,35 @@
++import { Controller, Get, Patch, Param, UseGuards, Delete } from '@nestjs/common';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { BookService } from './book.service';
++
++@Controller('admin/avaliacoes')
++@ApiTags('AdminReviews')
++@ApiBearerAuth('JWT')
++@UseGuards(JwtAuthGuard, RolesGuard)
++export class AdminReviewsController {
++  constructor(private service: BookService) {}
++
++  @Get('pending')
++  @Roles('admin')
++  @ApiOperation({ summary: 'List pending reviews (admin)' })
++  async listPending() {
++    return this.service.getPendingReviews();
++  }
++
++  @Patch(':id/approve')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Approve a review' })
++  async approve(@Param('id') id: string) {
++    return this.service.approveReview(Number(id));
++  }
++
++  @Delete(':id')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Reject (delete) a review' })
++  async reject(@Param('id') id: string) {
++    return this.service.rejectReview(Number(id));
++  }
++}
+diff --git a/src/modules/books/book.controller.ts b/src/modules/books/book.controller.ts
+index 1ff2d04..1e9a5df 100644
+--- a/src/modules/books/book.controller.ts
++++ b/src/modules/books/book.controller.ts
+@@ -65,6 +65,8 @@ export class BookController {
+     }
+   }
+ 
++
++
+   @Post()
+   @UseGuards(JwtAuthGuard, RolesGuard)
+   @Roles('admin')
+diff --git a/src/modules/books/book.repository.ts b/src/modules/books/book.repository.ts
+index 5594e6a..f53faf4 100644
+--- a/src/modules/books/book.repository.ts
++++ b/src/modules/books/book.repository.ts
+@@ -113,6 +113,26 @@ export class BookRepository {
+     });
+   }
+ 
++  async findApprovedReviewsByBook(id_livro: number) {
++    return this.prisma.avaliacao.findMany({
++      where: { id_livro },
++      orderBy: { data_avaliacao: 'desc' },
++      include: { usuario: { select: { id_usuario: true, nome: true } } },
++    });
++  }
++
++  async findPendingReviews() {
++    return this.prisma.avaliacao.findMany({
++      orderBy: { data_avaliacao: 'desc' },
++      include: { usuario: { select: { id_usuario: true, nome: true } }, livro: { select: { id_livro: true, titulo: true } } },
++      take: 50,
++    });
++  }
++
++  async deleteReview(id_avaliacao: number) {
++    return this.prisma.avaliacao.delete({ where: { id_avaliacao } });
++  }
++
+   async createReviewForBook(id_livro: number, id_usuario: number, data: Prisma.AvaliacaoCreateInput) {
+     return this.prisma.avaliacao.create({
+       data: {
+@@ -125,4 +145,6 @@ export class BookRepository {
+       },
+     });
+   }
++
++
+ }
+\ No newline at end of file
+diff --git a/src/modules/books/book.service.ts b/src/modules/books/book.service.ts
+index bec2599..d436054 100644
+--- a/src/modules/books/book.service.ts
++++ b/src/modules/books/book.service.ts
+@@ -1,6 +1,7 @@
+ import { Injectable, NotFoundException } from '@nestjs/common';
+ import { Prisma } from '@prisma/client';
+ import { BookRepository } from './book.repository';
++import { DecimalHelper } from '@/shared/utils/decimal.helper';
+ 
+ @Injectable()
+ export class BookService {
+@@ -76,7 +77,7 @@ export class BookService {
+       id_estoque: s.id_estoque,
+       id_livro: s.id_livro,
+       quantidade: s.quantidade,
+-      preco: this.formatDecimalToPrice(s.preco),
++      preco: DecimalHelper.toString(s.preco),
+       condicao: s.condicao,
+     }));
+ 
+@@ -119,6 +120,28 @@ export class BookService {
+     }));
+   }
+ 
++  async getPendingReviews() {
++    const reviews = await this.repository.findPendingReviews();
++    return (reviews || []).map((r: any) => ({
++      id_avaliacao: r.id_avaliacao,
++      id_livro: r.id_livro,
++      livro: r.livro ? { id_livro: r.livro.id_livro, titulo: r.livro.titulo } : undefined,
++      id_usuario: r.id_usuario,
++      nota: r.nota,
++      comentario: r.comentario,
++      data_avaliacao: r.data_avaliacao,
++      usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
++    }));
++  }
++
++  async approveReview(id_avaliacao: number) {
++    return { success: true };
++  }
++
++  async rejectReview(id_avaliacao: number) {
++    return this.repository.deleteReview(id_avaliacao);
++  }
++
+   async createReview(id_livro: number, id_usuario: number, dto: { nota: number; comentario?: string }) {
+     const livro = await this.repository.findById(id_livro);
+     if (!livro) throw new NotFoundException('Livro não encontrado.');
+@@ -139,21 +162,7 @@ export class BookService {
+     };
+   }
+ 
+-   private formatDecimalToPrice(precoRaw: any): string | null {
+-    if (precoRaw === null || precoRaw === undefined) return null;
+-    try {
+-      let precoStr: string;
+-      if (typeof precoRaw === 'object' && typeof precoRaw.toString === 'function') {
+-        precoStr = precoRaw.toString();
+-      } else {
+-        precoStr = String(precoRaw);
+-      }
+-      const num = Number(precoStr);
+-      return Number.isFinite(num) ? num.toFixed(2) : null;
+-    } catch (e) {
+-      return null;
+-    }
+-  }
++
+ 
+   private findLowestPriceInfo(estoqueArr: any[]): { preco: string | null; id_estoque: number | null } {
+     if (!Array.isArray(estoqueArr) || estoqueArr.length === 0) return { preco: null, id_estoque: null };
+@@ -163,10 +172,9 @@ export class BookService {
+ 
+     for (const s of estoqueArr) {
+       const precoRaw = s && s.preco;
+-      const precoStr = this.formatDecimalToPrice(precoRaw);
+-      if (precoStr === null) continue;
+-      const num = Number(precoStr);
+-      if (min === null || num < min) {
++      const num = DecimalHelper.toNumber(precoRaw);
++      
++      if (num > 0 && (min === null || num < min)) {
+         min = num;
+         minId = s.id_estoque ?? null;
+       }
+diff --git a/src/modules/books/books.module.ts b/src/modules/books/books.module.ts
+index 32f8264..8eb5e6e 100644
+--- a/src/modules/books/books.module.ts
++++ b/src/modules/books/books.module.ts
+@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
+ import { BookRepository } from './book.repository';
+ import { BookService } from './book.service';
+ import { BookController } from './book.controller';
++import { AdminReviewsController } from './admin-reviews.controller';
+ 
+ @Module({
+-  controllers: [BookController],
++  controllers: [BookController, AdminReviewsController],
+   providers: [BookService, BookRepository],
+   exports: [BookService],
+ })
+diff --git a/src/modules/cart/cart.controller.ts b/src/modules/cart/cart.controller.ts
+index 4a93e24..e929917 100644
+--- a/src/modules/cart/cart.controller.ts
++++ b/src/modules/cart/cart.controller.ts
+@@ -1,4 +1,4 @@
+-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
++import { Controller, Post, Body, UseGuards, Get, Delete, Param } from '@nestjs/common';
+ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+ import { RolesGuard } from '../auth/roles.guard';
+ import { CartService } from './cart.service';
+@@ -26,4 +26,21 @@ export class CartController {
+   async getCart(@CurrentUser('id') id_usuario: number) {
+     return this.service.getCart(id_usuario);
+   }
++
++  @Delete('items/:id')
++  @ApiOperation({ summary: 'Remove an item from the cart' })
++  @ApiResponse({ status: 200, description: 'Item removed from cart' })
++  async removeItem(
++    @Param('id') id_carrinho_item: string,
++    @CurrentUser('id') id_usuario: number
++  ) {
++    return this.service.removeItem(id_usuario, parseInt(id_carrinho_item, 10));
++  }
++
++  @Delete()
++  @ApiOperation({ summary: 'Clear all items from the cart' })
++  @ApiResponse({ status: 200, description: 'Cart cleared' })
++  async clearCart(@CurrentUser('id') id_usuario: number) {
++    return this.service.clearCart(id_usuario);
++  }
+ }
+diff --git a/src/modules/cart/cart.repository.ts b/src/modules/cart/cart.repository.ts
+index c5f7b90..8348e55 100644
+--- a/src/modules/cart/cart.repository.ts
++++ b/src/modules/cart/cart.repository.ts
+@@ -39,15 +39,40 @@ export class CartRepository {
+     });
+   }
+ 
++  async removeItem(id_carrinho_item: number) {
++    return this.prisma.carrinhoItem.delete({
++      where: { id_carrinho_item },
++    });
++  }
++
++  async removeAllItems(id_carrinho: number) {
++    return this.prisma.carrinhoItem.deleteMany({
++      where: { id_carrinho },
++    });
++  }
++
+   async findCartWithDetailsByUserId(id_usuario: number) {
+     return this.prisma.carrinho.findUnique({
+-      where: { id_usuario },
++      where: { id_usuario: id_usuario },
+       include: {
+         itens: {
+           include: {
+             estoque: { 
+               include: {
+-                livro: true,
++                livro: {
++                  include: {
++                    autores: {
++                      include: {
++                        autor: true,
++                      },
++                    },
++                    generos: {
++                      include: {
++                        genero: true,
++                      },
++                    },
++                  },
++                },
+               },
+             },
+           },
+diff --git a/src/modules/cart/cart.service.ts b/src/modules/cart/cart.service.ts
+index 6a374bf..8ad4a6e 100644
+--- a/src/modules/cart/cart.service.ts
++++ b/src/modules/cart/cart.service.ts
+@@ -1,6 +1,7 @@
+ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+ import { CartRepository } from './cart.repository';
+ import { StockRepository } from '@/modules/stock/stock.repository';
++import { DecimalHelper } from '@/shared/utils/decimal.helper';
+ 
+ interface IAddItem {
+   id_usuario: number;
+@@ -39,14 +40,62 @@ export class CartService {
+         id_carrinho: null,
+         id_usuario,
+         itens: [],
+-        total: 0,
++        total: '0.00',
+       };
+     }
+ 
++    // Converte preços para strings, inclui dados do livro completos e calcula total
++    const itensFormatted = cart.itens.map(item => {
++      // Formatar autores
++      const autores = item.estoque.livro.autores?.map(la => ({
++        id_autor: la.autor.id_autor,
++        nome_completo: la.autor.nome_completo,
++      })) || [];
++
++      // Formatar gêneros
++      const generos = item.estoque.livro.generos?.map(lg => ({
++        id_genero: lg.genero.id_genero,
++        nome: lg.genero.nome,
++      })) || [];
++
++      return {
++        ...item,
++        estoque: {
++          ...item.estoque,
++          preco: DecimalHelper.toString(item.estoque.preco),
++          livro: {
++            ...item.estoque.livro,
++            autores,
++            generos,
++          },
++        },
++      };
++    });
++
+     const total = cart.itens.reduce((acc, item) => {
+-      return acc + item.quantidade * Number(item.estoque.preco);
++      return acc + item.quantidade * DecimalHelper.toNumber(item.estoque.preco);
+     }, 0);
+ 
+-    return { ...cart, total: total.toFixed(2) };
++    return { 
++      ...cart, 
++      itens: itensFormatted,
++      total: total.toFixed(2) 
++    };
++  }
++
++  async removeItem(_id_usuario: number, id_carrinho_item: number) {
++    // TODO: Adicionar validação para garantir que o item pertence ao usuário
++    // Por enquanto, deletamos diretamente por ID
++    try {
++      await this.cartRepository.removeItem(id_carrinho_item);
++      return { message: 'Item removido do carrinho com sucesso' };
++    } catch (error) {
++      throw new NotFoundException('Item não encontrado no carrinho');
++    }
++  }
++
++  async clearCart(id_usuario: number) {
++    const cart = await this.cartRepository.findOrCreateByUserId(id_usuario);
++    return this.cartRepository.removeAllItems(cart.id_carrinho);
+   }
+ }
+\ No newline at end of file
+diff --git a/src/modules/offers/offers.module.ts b/src/modules/offers/offers.module.ts
+index d88cd14..a5ca12a 100644
+--- a/src/modules/offers/offers.module.ts
++++ b/src/modules/offers/offers.module.ts
+@@ -8,5 +8,6 @@ import { PrismaModule } from '@/prisma/prisma.module';
+   imports: [PrismaModule],
+   providers: [OffersRepository, OffersService],
+   controllers: [OffersController],
++  exports: [OffersService],
+ })
+ export class OffersModule {}
+\ No newline at end of file
+diff --git a/src/modules/orders/admin-orders.controller.ts b/src/modules/orders/admin-orders.controller.ts
+new file mode 100644
+index 0000000..36e96fd
+--- /dev/null
++++ b/src/modules/orders/admin-orders.controller.ts
+@@ -0,0 +1,37 @@
++import { Controller, Get, Query, UseGuards, Patch, Param, Body } from '@nestjs/common';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { OrderService } from './order.service';
++
++@Controller('admin/orders')
++@ApiTags('AdminOrders')
++@ApiBearerAuth('JWT')
++@UseGuards(JwtAuthGuard, RolesGuard)
++export class AdminOrdersController {
++  constructor(private service: OrderService) {}
++
++  @Get()
++  @Roles('admin')
++  @ApiOperation({ summary: 'List all orders (admin) with pagination and filters' })
++  async findAll(
++    @Query('page') page = '1',
++    @Query('limit') limit = '20',
++    @Query('status') status?: string,
++    @Query('q') q?: string,
++    @Query('sort') sort?: string,
++  ) {
++    const p = Math.max(1, parseInt(page as any, 10) || 1);
++    const l = Math.min(100, parseInt(limit as any, 10) || 20);
++    return this.service.findAllAdmin({ page: p, limit: l, status, q, sort });
++  }
++
++  @Patch(':id/status')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Update order status (admin)' })
++  async updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
++    const status = body?.status;
++    return this.service.updateStatusById(Number(id), status);
++  }
++}
+diff --git a/src/modules/orders/order.controller.ts b/src/modules/orders/order.controller.ts
+index d977acf..ed6d0f4 100644
+--- a/src/modules/orders/order.controller.ts
++++ b/src/modules/orders/order.controller.ts
+@@ -1,4 +1,4 @@
+-import { Controller, Get, Post, UseGuards, Body, BadRequestException, ForbiddenException } from '@nestjs/common';
++import { Controller, Get, Post, UseGuards, Body, BadRequestException, ForbiddenException, Param } from '@nestjs/common';
+ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+ import { OrderService } from './order.service';
+@@ -26,6 +26,12 @@ export class OrderController {
+     return await this.service.getMyOrders(id_usuario);
+   }
+ 
++  @Get(':id')
++  @ApiOperation({ summary: 'Get order details by id' })
++  async getOrderById(@CurrentUser('id') id_usuario: number, @Param('id') id: string) {
++    return await this.service.getOrderById(id_usuario, Number(id));
++  }
++
+   // Dev helper: create cart with provided items and immediately finalize the order.
+   // This endpoint is ONLY available when NODE_ENV !== 'production'.
+   @Post('confirm-test')
+diff --git a/src/modules/orders/order.repository.ts b/src/modules/orders/order.repository.ts
+index aa793b3..ee4883d 100644
+--- a/src/modules/orders/order.repository.ts
++++ b/src/modules/orders/order.repository.ts
+@@ -25,6 +25,17 @@ export class OrderRepository {
+           select: {
+             preco_unitario: true,
+             quantidade: true,
++            estoque: {
++              select: {
++                id_estoque: true,
++                livro: {
++                  select: {
++                    id_livro: true,
++                    titulo: true,
++                  }
++                }
++              }
++            }
+           },
+         },
+       },
+@@ -58,22 +69,19 @@ export class OrderRepository {
+         });
+ 
+         if (updated.count === 0) {
+-          // Determine whether item missing or insufficient
+           const maybeStock = await tx.estoque.findUnique({ where: { id_estoque } });
+           if (!maybeStock) throw new Error(`Item de estoque não encontrado (id_estoque=${id_estoque}).`);
+           throw new Error(`Quantidade insuficiente para id_estoque=${id_estoque}.`);
+         }
+       }
+ 
+-      // Create Pedido
+-      const pedido = await tx.pedido.create({
+-        data: {
+-          id_cliente: id_usuario,
+-          status_pedido: 'paid',
+-        },
+-      });
++      const pedidoData: any = {
++        id_cliente: id_usuario,
++        status_pedido: 'paid',
++      };
++
++      const pedido = await tx.pedido.create({ data: pedidoData });
+ 
+-      // Create ItemPedido entries (snapshot price from estoque)
+       const itemsToCreate = cart.itens.map((it) => ({
+         id_pedido: pedido.id_pedido,
+         id_estoque: it.id_estoque,
+@@ -85,7 +93,6 @@ export class OrderRepository {
+         await tx.itemPedido.create({ data: it });
+       }
+ 
+-      // Create Pagamento record
+       await tx.pagamento.create({
+         data: {
+           id_pedido: pedido.id_pedido,
+@@ -97,10 +104,167 @@ export class OrderRepository {
+         },
+       });
+ 
+-      // Clear cart items
+       await tx.carrinhoItem.deleteMany({ where: { id_carrinho: cart.id_carrinho } });
+ 
+       return pedido;
+     });
+   }
++
++  async updateOrderStatusByExternalReference(externalReference: string, status: string) {
++    const pedido = await this.prisma.pedido.findFirst({
++      where: {
++        pagamento: {
++          id_transacao_gateway: externalReference
++        }
++      },
++      include: {
++        pagamento: true
++      }
++    });
++
++    if (!pedido) {
++      throw new Error(`Pedido não encontrado com external_reference: ${externalReference}`);
++    }
++
++    // Atualizar status do pedido
++    const updatedPedido = await this.prisma.pedido.update({
++      where: {
++        id_pedido: pedido.id_pedido
++      },
++      data: {
++        status_pedido: status
++      }
++    });
++
++    // Atualizar status do pagamento também
++    if (pedido.pagamento) {
++      await this.prisma.pagamento.update({
++        where: {
++          id_pagamento: pedido.pagamento.id_pagamento
++        },
++        data: {
++          status_pagamento: status
++        }
++      });
++    }
++
++    return updatedPedido;
++  }
++
++  async getOrderStatusByExternalReference(externalReference: string, userId?: number) {
++    const whereCondition: any = {
++      pagamento: {
++        id_transacao_gateway: externalReference
++      }
++    };
++
++    // Se userId fornecido, filtrar apenas pedidos do usuário
++    if (userId) {
++      whereCondition.id_cliente = userId;
++    }
++
++    const pedido = await this.prisma.pedido.findFirst({
++      where: whereCondition,
++      include: {
++        pagamento: true,
++        cliente: {
++          select: {
++            id_usuario: true,
++            nome: true,
++            email: true
++          }
++        }
++      }
++    });
++
++    if (!pedido) {
++      throw new Error(`Pedido não encontrado com external_reference: ${externalReference}`);
++    }
++
++    return {
++      id_pedido: pedido.id_pedido,
++      status_pedido: pedido.status_pedido,
++      data_pedido: pedido.data_pedido,
++      external_reference: externalReference,
++      pagamento: pedido.pagamento ? {
++        status_pagamento: pedido.pagamento.status_pagamento,
++        metodo_pagamento: pedido.pagamento.metodo_pagamento,
++        valor_pago: pedido.pagamento.valor_pago
++      } : null,
++      cliente: pedido.cliente
++    };
++  }
++
++  async findById(id_pedido: number, id_usuario?: number) {
++    const whereCondition: any = { id_pedido };
++    if (id_usuario) whereCondition.id_cliente = id_usuario;
++
++    return this.prisma.pedido.findFirst({
++      where: whereCondition,
++      include: {
++        itens: {
++          include: {
++            estoque: {
++              include: {
++                livro: true,
++              },
++            },
++          },
++        },
++        pagamento: true,
++        cliente: {
++          select: { id_usuario: true, nome: true, email: true },
++        },
++      },
++    });
++  }
++
++  async findAndCountAdmin(opts: { page: number; limit: number; status?: string; q?: string; sort?: string }) {
++    const { page, limit, status, q, sort } = opts;
++
++    const where: any = {};
++    if (status) where.status_pedido = status;
++
++    if (q) {
++      const qNum = Number(q);
++      const or: any[] = [];
++      if (!isNaN(qNum)) or.push({ id_pedido: qNum });
++      or.push({ cliente: { nome: { contains: q, mode: 'insensitive' } } });
++      or.push({ cliente: { email: { contains: q, mode: 'insensitive' } } });
++      where.OR = or;
++    }
++
++    // sort parsing: expected like 'data_pedido:desc' or 'data_pedido:asc'
++    let orderBy: any = { data_pedido: 'desc' };
++    if (sort) {
++      const [field, dir] = sort.split(':');
++      if (field && dir && (dir === 'asc' || dir === 'desc')) {
++        orderBy = { [field]: dir };
++      }
++    }
++
++    const [items, total] = await Promise.all([
++      this.prisma.pedido.findMany({
++        where,
++        include: {
++          itens: { include: { estoque: { include: { livro: true } } } },
++          pagamento: true,
++          cliente: { select: { id_usuario: true, nome: true, email: true } },
++        },
++        skip: (page - 1) * limit,
++        take: limit,
++        orderBy,
++      }),
++      this.prisma.pedido.count({ where }),
++    ]);
++
++    return { items, total };
++  }
++
++  async updateStatusById(id_pedido: number, status: string) {
++    return this.prisma.pedido.update({
++      where: { id_pedido },
++      data: { status_pedido: status },
++    });
++  }
+ }
+diff --git a/src/modules/orders/order.service.ts b/src/modules/orders/order.service.ts
+index 847122c..7f53cf9 100644
+--- a/src/modules/orders/order.service.ts
++++ b/src/modules/orders/order.service.ts
+@@ -1,5 +1,6 @@
+ import { Injectable, BadRequestException } from '@nestjs/common';
+ import { OrderRepository } from './order.repository';
++import { mapOrderStatusToLabel } from '@/shared/utils/status.util';
+ 
+ @Injectable()
+ export class OrderService {
+@@ -22,6 +23,141 @@ export class OrderService {
+   }
+ 
+   async getMyOrders(id_usuario: number) {
+-    return this.orderRepository.getMyOrders(id_usuario);
++    const rows = await this.orderRepository.getMyOrders(id_usuario);
++    // Normalize decimals and compute totals for each order from items
++    const enriched = (rows || []).map((r: any) => this.normalizeOrder(r));
++    return enriched;
++  }
++
++  async getOrderById(id_usuario: number, id_pedido: number) {
++    const pedido = await this.orderRepository.findById(id_pedido, id_usuario);
++    if (!pedido) throw new BadRequestException('Pedido não encontrado');
++    return this.normalizeOrder(pedido);
++  }
++
++  async findAllAdmin(opts: { page?: number; limit?: number; status?: string; q?: string; sort?: string }) {
++    const page = Math.max(1, Number(opts.page ?? 1));
++    const limit = Math.min(100, Number(opts.limit ?? 20));
++
++    const { items, total } = await this.orderRepository.findAndCountAdmin({
++      page,
++      limit,
++      status: opts.status,
++      q: opts.q,
++      sort: opts.sort,
++    });
++
++    const normalized = (items || []).map((it: any) => this.normalizeOrder(it));
++
++    return {
++      items: normalized,
++      total,
++      page,
++      perPage: limit,
++    };
++  }
++
++  async updateStatusById(id_pedido: number, status: string) {
++    if (!status) throw new Error('status is required');
++    const updated = await this.orderRepository.updateStatusById(id_pedido, status);
++    return this.normalizeOrder(updated);
++  }
++
++  private normalizeOrder(pedido: any) {
++    if (!pedido) return pedido;
++
++    const cloned = { ...pedido } as any;
++
++    if (Array.isArray(cloned.itens)) {
++      cloned.itens = cloned.itens.map((it: any) => {
++        // resolve preco unitario: prefer explicit field, fallback to estoque.preco
++        const rawPreco = it.preco_unitario ?? it.estoque?.preco ?? null;
++
++        let precoNumber: number | null = null;
++        if (rawPreco != null) {
++          if (typeof rawPreco === 'object' && typeof rawPreco.toNumber === 'function') {
++            precoNumber = rawPreco.toNumber();
++          } else {
++            precoNumber = Number(rawPreco);
++          }
++        }
++
++        const preco_cents = precoNumber != null ? Math.round(precoNumber * 100) : null;
++
++        // normalize estoque.livro information
++        const livro = it.estoque?.livro
++          ? {
++              id_livro: it.estoque.livro.id_livro ?? it.estoque.livro.id,
++              titulo: it.estoque.livro.titulo,
++            }
++          : null;
++
++        return {
++          ...it,
++          preco_unitario: precoNumber,
++          preco_unitario_cents: preco_cents,
++          estoque: it.estoque ? { ...it.estoque, livro } : it.estoque,
++        };
++      });
++    }
++
++    // compute valor_total dynamically from itens if not provided
++    if (cloned.itens && cloned.itens.length > 0) {
++      const total = cloned.itens.reduce((acc: number, it: any) => {
++        const price = Number(it.preco_unitario ?? 0);
++        const qty = Number(it.quantidade ?? 0);
++        return acc + price * qty;
++      }, 0);
++      cloned.valor_total = total;
++      cloned.valor_total_cents = Math.round(total * 100);
++    }
++
++    // normalize pagamento.valor_pago if exists
++    if (cloned.pagamento && cloned.pagamento.valor_pago != null) {
++      const v = cloned.pagamento.valor_pago;
++      cloned.pagamento.valor_pago = typeof v === 'object' && typeof v.toNumber === 'function' ? v.toNumber() : Number(v);
++    }
++
++      cloned.status_pedido_label = mapOrderStatusToLabel(cloned.status_pedido);
++
++
++    return cloned;
++  }
++
++  async updateOrderStatusByExternalReference(externalReference: string, paymentStatus: string) {
++    try {
++      // Mapear status do Mercado Pago para status do sistema
++      let orderStatus: string;
++      
++      switch (paymentStatus) {
++        case 'approved':
++          orderStatus = 'PAGAMENTO_APROVADO';
++          break;
++        case 'pending':
++          orderStatus = 'PAGAMENTO_PENDENTE';
++          break;
++        case 'rejected':
++        case 'cancelled':
++          orderStatus = 'PAGAMENTO_REJEITADO';
++          break;
++        case 'refunded':
++          orderStatus = 'PAGAMENTO_ESTORNADO';
++          break;
++        default:
++          orderStatus = 'PAGAMENTO_DESCONHECIDO';
++      }
++
++      return await this.orderRepository.updateOrderStatusByExternalReference(externalReference, orderStatus);
++    } catch (err: any) {
++      throw new BadRequestException(`Erro ao atualizar status do pedido: ${err.message}`);
++    }
++  }
++
++  async getOrderStatusByExternalReference(externalReference: string, userId?: number) {
++    try {
++      return await this.orderRepository.getOrderStatusByExternalReference(externalReference, userId);
++    } catch (err: any) {
++      throw new BadRequestException(`Erro ao buscar status do pedido: ${err.message}`);
++    }
+   }
+ }
+diff --git a/src/modules/orders/orders.module.ts b/src/modules/orders/orders.module.ts
+index 270fd9d..a67ec78 100644
+--- a/src/modules/orders/orders.module.ts
++++ b/src/modules/orders/orders.module.ts
+@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
+ import { OrderRepository } from './order.repository';
+ import { OrderService } from './order.service';
+ import { OrderController } from './order.controller';
++import { AdminOrdersController } from './admin-orders.controller';
+ import { PrismaModule } from '@/prisma/prisma.module';
+ import { CartRepository } from '@/modules/cart/cart.repository';
+ 
+ @Module({
+   imports: [PrismaModule],
+   providers: [OrderRepository, OrderService, CartRepository],
+-  controllers: [OrderController],
++  controllers: [OrderController, AdminOrdersController],
++  exports: [OrderService, OrderRepository],
+ })
+ export class OrdersModule {}
+diff --git a/src/modules/payments/payment.controller.ts b/src/modules/payments/payment.controller.ts
+new file mode 100644
+index 0000000..15b34f1
+--- /dev/null
++++ b/src/modules/payments/payment.controller.ts
+@@ -0,0 +1,239 @@
++import { Controller, Post, Get, Body, Res, Logger, Query, Req, Param, BadRequestException, ForbiddenException } from '@nestjs/common';
++import { Request, Response } from 'express';
++import Stripe from 'stripe';
++import { ApiTags, ApiOperation } from '@nestjs/swagger';
++import { PaymentService } from './payment.service';
++import { OrderService } from '../orders/order.service';
++
++@ApiTags('Pagamentos')
++@Controller('payments')
++export class PaymentController {
++  private readonly logger = new Logger(PaymentController.name);
++
++  constructor(private readonly paymentService: PaymentService, private readonly orderService: OrderService) {}
++
++  @Post('create-checkout')
++  @ApiOperation({ summary: 'Criar sessão de Checkout Stripe (hosted)' })
++  async createCheckout(
++    @Body()
++    body: { userId: string; email: string; frontend_total?: number; frontend_items?: any[] }
++  ) {
++    if (!body || !body.userId || !body.email) throw new Error('userId and email are required');
++    this.logger.log('createCheckout called', { userId: body.userId, email: body.email, frontend_total: body.frontend_total });
++    const result = await this.paymentService.createCheckoutSession(body.userId, body.email);
++    return { success: true, data: result };
++  }
++
++  @Get('success')
++  async success(@Query('session_id') sessionId: string, @Res() res: Response) {
++    if (!sessionId) {
++      res.status(400).send('Missing session_id');
++      return;
++    }
++    try {
++      const session = await this.paymentService.retrieveCheckoutSession(sessionId);
++      const paymentIntent = (session as any).payment_intent;
++      const paid = paymentIntent ? (paymentIntent.status === 'succeeded') : (session.payment_status === 'paid');
++
++      const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
++      const params = new URLSearchParams();
++      params.set('session_id', session.id);
++      params.set('status', paid ? 'paid' : 'pending');
++      if ((session as any).amount_total) params.set('amount', String((session as any).amount_total));
++      if ((session as any).metadata?.userId) params.set('userId', (session as any).metadata.userId);
++
++      const redirectTo = `${frontend}/payment/success?${params.toString()}`;
++      res.redirect(302, redirectTo);
++      return;
++    } catch (err) {
++      this.logger.error('Erro ao recuperar session', err as any);
++      const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
++      const redirectTo = `${frontend}/payment/failure?error=retrieve_session`;
++      res.redirect(302, redirectTo);
++      return;
++    }
++  }
++
++  @Get('failure')
++  cancel(@Res() res: Response) {
++    const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
++    res.redirect(302, `${frontend}/payment/failure`);
++  }
++
++  @Get('session/:sessionId')
++  @ApiOperation({ summary: 'Retornar dados da Checkout Session (consulta)' })
++  async getSession(@Param('sessionId') sessionId: string) {
++    if (!sessionId) throw new BadRequestException('sessionId is required');
++    try {
++      const session = await this.paymentService.retrieveCheckoutSession(sessionId);
++      const paymentIntent = (session as any).payment_intent;
++      const status = paymentIntent ? (paymentIntent.status === 'succeeded' ? 'paid' : paymentIntent.status) : (session.payment_status || 'unknown');
++      return { success: true, data: { status, session } };
++    } catch (err) {
++      this.logger.error('Erro ao recuperar session', err as any);
++      return { success: false, error: (err as any).message || 'error' };
++    }
++  }
++
++  @Post('webhook')
++  @ApiOperation({ summary: 'Endpoint para webhooks do Stripe' })
++  async webhook(@Req() req: Request, @Res() res: Response) {
++    const sig = req.headers['stripe-signature'] as string | undefined;
++    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
++    if (!webhookSecret) {
++      this.logger.warn('Stripe webhook secret not configured');
++      res.status(400).send('Webhook not configured');
++      return;
++    }
++
++    try {
++      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2022-11-15' });
++      // req.body should be a Buffer because main.ts registers raw body for this route
++      const buf = req.body as Buffer;
++      const event = stripe.webhooks.constructEvent(buf, sig!, webhookSecret);
++
++      if (event.type === 'checkout.session.completed') {
++        const session = event.data.object as any;
++        // Recupera a sessão expandida para garantir que payment_intent esteja disponível
++        const full = await this.paymentService.retrieveCheckoutSession(session.id);
++
++        // Diagnostic logs to help debugging when DB is not updated
++        this.logger.log('Webhook checkout.session.completed received', { sessionId: session.id, metadata: (full as any).metadata });
++
++        const userIdStr = (full as any).metadata?.userId;
++        const paymentIntent = (full as any).payment_intent as any;
++        const externalId = paymentIntent?.id || (full as any).payment_intent;
++        const amountTotal = (full as any).amount_total; // em centavos
++
++        this.logger.log('Webhook session details', { externalId, amountTotal, paymentIntent: paymentIntent ? { id: paymentIntent.id, status: paymentIntent.status } : null });
++
++        if (!userIdStr) {
++          this.logger.warn(`Webhook session ${session.id} has no metadata.userId — skipping automatic finalize`);
++        } else if (!externalId) {
++          this.logger.warn(`Webhook session ${session.id} has no payment intent/external id — skipping automatic finalize`);
++        } else {
++          const userId = Number(userIdStr);
++
++          // Verificar idempotência: se já existe um pedido com esse id_transacao_gateway, não criar de novo
++          try {
++            await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
++            this.logger.log(`Order already exists for external id ${externalId} (user ${userId}), skipping finalize`);
++          } catch (err) {
++            // se não existir, finalize o pedido a partir do carrinho
++            const paymentPayload = {
++              status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
++              id_transacao_gateway: String(externalId),
++              valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
++              metodo_pagamento: 'stripe',
++              payload_completo_gateway: full,
++            };
++
++            try {
++              const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
++              this.logger.log(`Order finalized from webhook: pedido.id=${(pedido as any)?.id_pedido} external=${externalId}`);
++            } catch (err) {
++              this.logger.error(`Failed to finalize order for user ${userId} external=${externalId}`, err as any);
++            }
++          }
++        }
++      }
++
++      res.status(200).send({ received: true });
++    } catch (err) {
++      this.logger.error('Webhook error', err as any);
++      res.status(400).send(`Webhook error: ${(err as any).message}`);
++    }
++  }
++
++  @Post('finalize-session')
++  @ApiOperation({ summary: 'DEBUG: Forçar finalização de pedido a partir de uma Checkout Session (dev only)' })
++  async finalizeSession(@Body() body: { sessionId?: string }) {
++    if (!body || !body.sessionId) throw new BadRequestException('sessionId is required in body');
++
++    const full = await this.paymentService.retrieveCheckoutSession(body.sessionId);
++    const userIdStr = (full as any).metadata?.userId;
++    const paymentIntent = (full as any).payment_intent as any;
++    const externalId = paymentIntent?.id || (full as any).payment_intent;
++    const amountTotal = (full as any).amount_total;
++
++    if (!userIdStr) throw new BadRequestException('session has no metadata.userId');
++    if (!externalId) throw new BadRequestException('session has no payment intent id');
++
++    const userId = Number(userIdStr);
++
++    try {
++      // check idempotency first
++      await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
++      return { success: false, message: 'Order already exists for this external id' };
++    } catch (err) {
++      // not found -> finalize
++      const paymentPayload = {
++        status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
++        id_transacao_gateway: String(externalId),
++        valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
++        metodo_pagamento: 'stripe',
++        payload_completo_gateway: full,
++      };
++
++      const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
++      return { success: true, pedido };
++    }
++  }
++
++  @Post('webhook-dev')
++  @ApiOperation({ summary: 'DEV: Simular webhook Stripe sem assinatura (apenas para testes locais)' })
++  async webhookDev(@Body() body: { eventType?: string; sessionId?: string; payload?: any }) {
++    // This endpoint purposely does NOT validate signatures. Use only in local/dev.
++    if (process.env.NODE_ENV === 'production') {
++      throw new ForbiddenException('webhook-dev is disabled in production');
++    }
++
++    if (!body || !body.eventType) {
++      throw new BadRequestException('eventType is required in body');
++    }
++
++    if (body.eventType !== 'checkout.session.completed') {
++      return { success: true, message: `event ${body.eventType} ignored by dev endpoint` };
++    }
++
++    if (!body.sessionId) {
++      throw new BadRequestException('sessionId is required for checkout.session.completed');
++    }
++
++    // Reuse same flow as real webhook: retrieve session then try finalize
++    const full = await this.paymentService.retrieveCheckoutSession(body.sessionId);
++    const userIdStr = (full as any).metadata?.userId;
++    const paymentIntent = (full as any).payment_intent as any;
++    const externalId = paymentIntent?.id || (full as any).payment_intent;
++    const amountTotal = (full as any).amount_total;
++
++    this.logger.log('webhook-dev invoked', { sessionId: body.sessionId, metadata: (full as any).metadata });
++
++    if (!userIdStr) {
++      throw new BadRequestException('session metadata.userId missing');
++    }
++
++    if (!externalId) {
++      throw new BadRequestException('payment intent id not found in session');
++    }
++
++    const userId = Number(userIdStr);
++
++    try {
++      await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
++      return { success: false, message: 'Order already exists for this external id' };
++    } catch (err) {
++      // finalize
++      const paymentPayload = {
++        status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
++        id_transacao_gateway: String(externalId),
++        valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
++        metodo_pagamento: 'stripe',
++        payload_completo_gateway: full,
++      };
++
++      const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
++      return { success: true, pedido };
++    }
++  }
++}
+diff --git a/src/modules/payments/payment.dto.ts b/src/modules/payments/payment.dto.ts
+new file mode 100644
+index 0000000..d3a90c0
+--- /dev/null
++++ b/src/modules/payments/payment.dto.ts
+@@ -0,0 +1,211 @@
++import { ApiProperty } from '@nestjs/swagger';
++import { IsNotEmpty, IsNumber, IsString, IsEmail, IsOptional, IsArray, ValidateNested } from 'class-validator';
++import { Type } from 'class-transformer';
++
++export class PaymentItemDto {
++  @ApiProperty({ description: 'ID do produto/serviço' })
++  @IsNotEmpty()
++  @IsString()
++  id!: string;
++
++  @ApiProperty({ description: 'Título do item' })
++  @IsNotEmpty()
++  @IsString()
++  title!: string;
++
++  @ApiProperty({ description: 'Categoria do item' })
++  @IsOptional()
++  @IsString()
++  category_id?: string;
++
++  @ApiProperty({ description: 'Quantidade' })
++  @IsNotEmpty()
++  @IsNumber()
++  quantity!: number;
++
++  @ApiProperty({ description: 'Preço unitário' })
++  @IsNotEmpty()
++  @IsNumber()
++  unit_price!: number;
++
++  @ApiProperty({ description: 'Descrição do item', required: false })
++  @IsOptional()
++  @IsString()
++  description?: string;
++}
++
++export class CreatePaymentDto {
++  @ApiProperty({ description: 'Email do comprador' })
++  @IsNotEmpty()
++  @IsEmail()
++  email!: string;
++
++  @ApiProperty({ description: 'Nome do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  name!: string;
++
++  @ApiProperty({ description: 'CPF do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  cpf!: string;
++
++  @ApiProperty({ description: 'Sobrenome do comprador', required: false })
++  @IsOptional()
++  @IsString()
++  surname?: string;
++
++  @ApiProperty({ type: [PaymentItemDto], description: 'Itens da compra' })
++  @IsArray()
++  @ValidateNested({ each: true })
++  @Type(() => PaymentItemDto)
++  items!: PaymentItemDto[];
++
++  @ApiProperty({ description: 'URL de retorno após pagamento bem-sucedido' })
++  @IsOptional()
++  @IsString()
++  success_url?: string;
++
++  @ApiProperty({ description: 'URL de retorno após pagamento falhou' })
++  @IsOptional()
++  @IsString()
++  failure_url?: string;
++
++  @ApiProperty({ description: 'URL de retorno após pagamento pendente' })
++  @IsOptional()
++  @IsString()
++  pending_url?: string;
++
++  @ApiProperty({ description: 'ID do pedido no sistema', required: false })
++  @IsOptional()
++  @IsString()
++  order_id?: string;
++}
++
++export class CreatePaymentFromCartDto {
++  @ApiProperty({ description: 'Email do comprador' })
++  @IsNotEmpty()
++  @IsEmail()
++  email!: string;
++
++  @ApiProperty({ description: 'Nome do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  name!: string;
++
++  @ApiProperty({ description: 'CPF do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  cpf!: string;
++
++  @ApiProperty({ description: 'Sobrenome do comprador', required: false })
++  @IsOptional()
++  @IsString()
++  surname?: string;
++
++  @ApiProperty({ description: 'URL de retorno após pagamento bem-sucedido', required: false })
++  @IsOptional()
++  @IsString()
++  success_url?: string;
++
++  @ApiProperty({ description: 'URL de retorno após pagamento falhou', required: false })
++  @IsOptional()
++  @IsString()
++  failure_url?: string;
++
++  @ApiProperty({ description: 'URL de retorno após pagamento pendente', required: false })
++  @IsOptional()
++  @IsString()
++  pending_url?: string;
++}
++
++// DTO para Checkout Transparente (processamento direto)
++export class CreateDirectPaymentDto {
++  @ApiProperty({ description: 'Email do comprador' })
++  @IsNotEmpty()
++  @IsEmail()
++  email!: string;
++
++  @ApiProperty({ description: 'Nome do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  name!: string;
++
++  @ApiProperty({ description: 'CPF do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  cpf!: string;
++
++  @ApiProperty({ description: 'Sobrenome do comprador' })
++  @IsNotEmpty()
++  @IsString()
++  surname!: string;
++
++  @ApiProperty({ description: 'Token do cartão gerado pelo frontend' })
++  @IsNotEmpty()
++  @IsString()
++  token!: string;
++
++  @ApiProperty({ description: 'ID do método de pagamento (visa, master, etc.)' })
++  @IsNotEmpty()
++  @IsString()
++  paymentMethodId!: string;
++
++  @ApiProperty({ description: 'ID do emissor do cartão' })
++  @IsOptional()
++  @IsString()
++  issuerId?: string;
++
++  @ApiProperty({ description: 'Número de parcelas', required: false })
++  @IsOptional()
++  @IsNumber()
++  installments?: number;
++}
++
++export class WebhookDto {
++  @ApiProperty({ description: 'ID do pagamento' })
++  id!: string;
++
++  @ApiProperty({ description: 'Tópico da notificação' })
++  topic!: string;
++
++  @ApiProperty({ description: 'Tipo de notificação' })
++  type!: string;
++
++  @ApiProperty({ description: 'Data de criação da notificação' })
++  date_created!: string;
++
++  @ApiProperty({ description: 'ID da aplicação' })
++  application_id!: string;
++
++  @ApiProperty({ description: 'ID do usuário' })
++  user_id!: string;
++
++  @ApiProperty({ description: 'Versão da API' })
++  version!: string;
++
++  @ApiProperty({ description: 'Ação da notificação' })
++  action!: string;
++
++  @ApiProperty({ description: 'Live mode' })
++  live_mode!: boolean;
++
++  @ApiProperty({ description: 'Dados da notificação' })
++  data!: {
++    id: string;
++  };
++}
++
++export class PaymentResponseDto {
++  @ApiProperty({ description: 'ID da preferência' })
++  id!: string;
++
++  @ApiProperty({ description: 'URL de checkout' })
++  init_point!: string;
++
++  @ApiProperty({ description: 'URL de checkout para sandbox' })
++  sandbox_init_point!: string;
++
++  @ApiProperty({ description: 'Status da preferência' })
++  status!: string;
++}
+\ No newline at end of file
+diff --git a/src/modules/payments/payment.module.ts b/src/modules/payments/payment.module.ts
+new file mode 100644
+index 0000000..a4bf95e
+--- /dev/null
++++ b/src/modules/payments/payment.module.ts
+@@ -0,0 +1,14 @@
++import { Module } from '@nestjs/common';
++import { ConfigModule } from '@nestjs/config';
++import { PaymentController } from './payment.controller';
++import { PaymentService } from './payment.service';
++import { CartModule } from '../cart/cart.module';
++import { OrdersModule } from '../orders/orders.module';
++
++@Module({
++  imports: [ConfigModule, CartModule, OrdersModule],
++  controllers: [PaymentController],
++  providers: [PaymentService],
++  exports: [PaymentService]
++})
++export class PaymentModule {}
+\ No newline at end of file
+diff --git a/src/modules/payments/payment.service.ts b/src/modules/payments/payment.service.ts
+new file mode 100644
+index 0000000..44d03c0
+--- /dev/null
++++ b/src/modules/payments/payment.service.ts
+@@ -0,0 +1,108 @@
++import { Injectable, Logger, BadRequestException } from '@nestjs/common';
++import Stripe from 'stripe';
++import { CartService } from '../cart/cart.service';
++
++@Injectable()
++export class PaymentService {
++  private readonly logger = new Logger(PaymentService.name);
++  private stripe: Stripe;
++
++  constructor(private readonly cartService: CartService) {
++    const secret = process.env.STRIPE_SECRET_KEY || '';
++    this.stripe = new Stripe(secret, { apiVersion: '2022-11-15' });
++  }
++
++  /**
++   * Create a Checkout Session (hosted by Stripe).
++   * Uses server-side cart as authority; if cart is empty, rejects with 400.
++   */
++  async createCheckoutSession(userId: string, email: string) {
++    try {
++      // Get authoritative cart from server
++      const cart = await this.cartService.getCart(Number(userId));
++
++      if (!cart || !Array.isArray((cart as any).itens) || (cart as any).itens.length === 0) {
++        throw new BadRequestException('Carrinho não encontrado no servidor. Crie/atualize o carrinho antes de iniciar o pagamento.');
++      }
++
++      // Build line_items from server cart
++      const line_items = (cart as any).itens.map((ci: any) => {
++        const unit = Math.round(Number(ci.estoque.preco) * 100);
++        return {
++          price_data: {
++            currency: 'brl',
++            product_data: { name: ci.estoque.livro?.titulo || ci.estoque.nome || 'Produto' },
++            unit_amount: unit,
++          },
++          quantity: Number(ci.quantidade || 1),
++        };
++      });
++
++      const totalCents = Math.round(Number((cart as any).total) * 100);
++
++      this.logger.log('Creating Checkout Session - preview', { userId, email, totalCents, line_items_preview: line_items });
++
++      const session = await this.stripe.checkout.sessions.create({
++        payment_method_types: ['card'],
++        mode: 'payment',
++        customer_email: email,
++        line_items,
++        success_url: `${process.env.BACKEND_URL || 'http://localhost:3333'}/api/payments/success?session_id={CHECKOUT_SESSION_ID}`,
++        cancel_url: `${process.env.BACKEND_URL || 'http://localhost:3333'}/api/payments/failure`,
++        metadata: {
++          userId,
++          cart_total_cents: String(totalCents),
++        },
++      });
++
++      return { url: session.url, sessionId: session.id };
++    } catch (err) {
++      this.logger.error('Erro criando Checkout Session', err as any);
++      throw err;
++    }
++  }
++
++  // Create a PaymentIntent for a given amount (in BRL)
++  async createStripePaymentIntent(amount: number, currency = 'brl') {
++    try {
++      const intent = await this.stripe.paymentIntents.create({
++        amount: Math.round(amount),
++        currency,
++      });
++      return { id: intent.id, client_secret: intent.client_secret, amount: intent.amount, currency: intent.currency };
++    } catch (err) {
++      this.logger.error('Erro criando PaymentIntent', err as any);
++      throw err;
++    }
++  }
++
++  // Minimal helpers expected by controllers (stubs)
++  async createPaymentFromCart(_userId: string, data: any) {
++    return { id: `local_${Date.now()}`, status: 'CREATED', data };
++  }
++
++  async createPixPaymentFromCart(_userId: string, data: any) {
++    return { id: `pix_${Date.now()}`, status: 'PENDING', data };
++  }
++
++  async createDirectPaymentFromCart(_userId: string, data: any) {
++    return { id: `direct_${Date.now()}`, status: 'PROCESSING', data };
++  }
++
++  // Other small methods used by controllers — simple stubs
++  async getTestModeInfo() {
++    return { provider: 'stripe', mode: process.env.STRIPE_SECRET_KEY ? 'test-or-live-set' : 'no-keys' };
++  }
++
++  // Retrieve a Checkout Session and associated PaymentIntent (if present)
++  async retrieveCheckoutSession(sessionId: string) {
++    try {
++      if (!sessionId) throw new Error('sessionId is required');
++      const session = await this.stripe.checkout.sessions.retrieve(sessionId, { expand: ['payment_intent'] });
++      return session;
++    } catch (err) {
++      this.logger.error('Erro retrieving Checkout Session', err as any);
++      throw err;
++    }
++  }
++}
+diff --git a/src/modules/publications/dto/create-publication-comment.dto.ts b/src/modules/publications/dto/create-publication-comment.dto.ts
+new file mode 100644
+index 0000000..9fafaba
+--- /dev/null
++++ b/src/modules/publications/dto/create-publication-comment.dto.ts
+@@ -0,0 +1,8 @@
++import { IsString } from 'class-validator';
++import { ApiProperty } from '@nestjs/swagger';
++
++export class CreatePublicationCommentDto {
++  @ApiProperty({ example: 'Muito bom!' })
++  @IsString()
++  conteudo!: string;
++}
+diff --git a/src/modules/publications/publication.controller.ts b/src/modules/publications/publication.controller.ts
+new file mode 100644
+index 0000000..214d787
+--- /dev/null
++++ b/src/modules/publications/publication.controller.ts
+@@ -0,0 +1,57 @@
++import { Controller, Post, Get, Param, Body, UseGuards, Delete } from '@nestjs/common';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { PublicationService } from './publication.service';
++import { CreatePublicationCommentDto } from './dto/create-publication-comment.dto';
++import { CurrentUser } from '@/core/decorators/current-user.decorator';
++
++@Controller('publicacoes')
++@ApiTags('Publications')
++export class PublicationController {
++  constructor(private service: PublicationService) {}
++
++  @Post(':id/comentarios')
++  @UseGuards(JwtAuthGuard)
++  @ApiBearerAuth('JWT')
++  @ApiOperation({ summary: 'Create comment on a publication (auth)' })
++  async createComment(@Param('id') id: string, @CurrentUser('id') id_usuario: number, @Body() dto: CreatePublicationCommentDto) {
++    return this.service.createComment(Number(id), id_usuario, dto.conteudo);
++  }
++
++  @Get(':id/comentarios')
++  @ApiOperation({ summary: 'Get approved comments for a publication' })
++  async getComments(@Param('id') id: string) {
++    return this.service.getApprovedComments(Number(id));
++  }
++}
++
++@Controller('admin/publicacoes/comentarios')
++@ApiTags('AdminPublicationsComments')
++@UseGuards(JwtAuthGuard, RolesGuard)
++@ApiBearerAuth('JWT')
++export class AdminPublicationCommentsController {
++  constructor(private service: PublicationService) {}
++
++  @Get('pending')
++  @Roles('admin')
++  @ApiOperation({ summary: 'List pending publication comments (admin)' })
++  async listPending() {
++    return this.service.getPendingComments();
++  }
++
++  @Post(':id/approve')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Approve a publication comment' })
++  async approve(@Param('id') id: string) {
++    return this.service.approveComment(Number(id));
++  }
++
++  @Delete(':id')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Reject (delete) a publication comment' })
++  async reject(@Param('id') id: string) {
++    return this.service.rejectComment(Number(id));
++  }
++}
+diff --git a/src/modules/publications/publication.repository.ts b/src/modules/publications/publication.repository.ts
+new file mode 100644
+index 0000000..2ab64ad
+--- /dev/null
++++ b/src/modules/publications/publication.repository.ts
+@@ -0,0 +1,44 @@
++import { Injectable } from '@nestjs/common';
++import { PrismaService } from '@/prisma/prisma.service';
++
++@Injectable()
++export class PublicationRepository {
++  constructor(private prisma: PrismaService) {}
++
++  async createComment(id_publicacao: number, id_usuario: number, conteudo: string) {
++    return this.prisma.publicacaoComentario.create({
++      data: {
++        id_publicacao,
++        id_usuario,
++        conteudo,
++      },
++    });
++  }
++
++  async findApprovedComments(id_publicacao: number) {
++    // Schema does not have approval flag; return comments for the publication (visible by default)
++    return this.prisma.publicacaoComentario.findMany({
++      where: { id_publicacao },
++      orderBy: { data_comentario: 'desc' },
++      include: { usuario: { select: { id_usuario: true, nome: true } } },
++    });
++  }
++
++  async findPendingComments() {
++    // Without approval flag, return recent comments for admin moderation
++    return this.prisma.publicacaoComentario.findMany({
++      include: { usuario: { select: { id_usuario: true, nome: true } }, publicacao: { select: { id_publicacao: true, titulo: true } } },
++      orderBy: { data_comentario: 'desc' },
++      take: 50,
++    });
++  }
++
++  async updateCommentApproval(id_comentario: number) {
++    // No-op compatibility: return the comment as-is (approval is handled by deletion in this strategy)
++    return this.prisma.publicacaoComentario.findUnique({ where: { id_comentario } });
++  }
++
++  async deleteComment(id_comentario: number) {
++    return this.prisma.publicacaoComentario.delete({ where: { id_comentario } });
++  }
++}
+diff --git a/src/modules/publications/publication.service.ts b/src/modules/publications/publication.service.ts
+new file mode 100644
+index 0000000..d76a81c
+--- /dev/null
++++ b/src/modules/publications/publication.service.ts
+@@ -0,0 +1,28 @@
++import { Injectable } from '@nestjs/common';
++import { PublicationRepository } from './publication.repository';
++
++@Injectable()
++export class PublicationService {
++  constructor(private repo: PublicationRepository) {}
++
++  async createComment(id_publicacao: number, id_usuario: number, conteudo: string) {
++    return this.repo.createComment(id_publicacao, id_usuario, conteudo);
++  }
++
++  async getApprovedComments(id_publicacao: number) {
++    return this.repo.findApprovedComments(id_publicacao);
++  }
++
++  async getPendingComments() {
++    return this.repo.findPendingComments();
++  }
++
++  async approveComment(id_comentario: number) {
++    // No-op: comments are visible by default; approving is a no-op in this strategy
++    return this.repo.updateCommentApproval(id_comentario);
++  }
++
++  async rejectComment(id_comentario: number) {
++    return this.repo.deleteComment(id_comentario);
++  }
++}
+diff --git a/src/modules/publications/publications.module.ts b/src/modules/publications/publications.module.ts
+new file mode 100644
+index 0000000..ffa960b
+--- /dev/null
++++ b/src/modules/publications/publications.module.ts
+@@ -0,0 +1,12 @@
++import { Module } from '@nestjs/common';
++import { PublicationRepository } from './publication.repository';
++import { PublicationService } from './publication.service';
++import { PublicationController, AdminPublicationCommentsController } from './publication.controller';
++
++@Module({
++  imports: [],
++  controllers: [PublicationController, AdminPublicationCommentsController],
++  providers: [PublicationService, PublicationRepository],
++  exports: [PublicationService],
++})
++export class PublicationsModule {}
+diff --git a/src/modules/repairs/admin-repairs.controller.ts b/src/modules/repairs/admin-repairs.controller.ts
+new file mode 100644
+index 0000000..791dc3b
+--- /dev/null
++++ b/src/modules/repairs/admin-repairs.controller.ts
+@@ -0,0 +1,29 @@
++import { Controller, Get, Query, UseGuards } from '@nestjs/common';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { RepairsService } from './repairs.service';
++
++@Controller('admin/repairs')
++@ApiTags('AdminRepairs')
++@ApiBearerAuth('JWT')
++@UseGuards(JwtAuthGuard, RolesGuard)
++export class AdminRepairsController {
++  constructor(private service: RepairsService) {}
++
++  @Get()
++  @Roles('admin')
++  @ApiOperation({ summary: 'List all repair requests (admin) with pagination and filters' })
++  async findAll(
++    @Query('page') page = '1',
++    @Query('limit') limit = '20',
++    @Query('status') status?: string,
++    @Query('q') q?: string,
++    @Query('sort') sort?: string,
++  ) {
++    const p = Math.max(1, parseInt(page as any, 10) || 1);
++    const l = Math.min(100, parseInt(limit as any, 10) || 20);
++    return this.service.findAllAdmin({ page: p, limit: l, status, q, sort });
++  }
++}
+diff --git a/src/modules/repairs/repairs.controller.ts b/src/modules/repairs/repairs.controller.ts
+index 14659a7..956b767 100644
+--- a/src/modules/repairs/repairs.controller.ts
++++ b/src/modules/repairs/repairs.controller.ts
+@@ -1,10 +1,14 @@
+-import { Controller, Get, Post, Patch, Param, UseGuards, Body } from '@nestjs/common';
++import { Controller, Get, Post, Patch, Param, UseGuards, Body, UseInterceptors, UploadedFiles } from '@nestjs/common';
+ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
+ import { RepairsService } from './repairs.service';
+ import { CreateRepairDto } from './dto/create-repair.dto';
+ import { RespondRepairDto } from './dto/respond-repair.dto';
+ import { CurrentUser } from '@/core/decorators/current-user.decorator';
++import { FilesInterceptor } from '@nestjs/platform-express';
+ 
+ @Controller('repairs')
+ @ApiTags('Repairs')
+@@ -15,8 +19,26 @@ export class RepairsController {
+ 
+   @Post()
+   @ApiOperation({ summary: 'Create repair request' })
+-  async createRequest(@CurrentUser('id') id_usuario: number, @Body() dto: CreateRepairDto) {
+-    return this.service.createRequest(id_usuario, dto);
++  @ApiConsumes('multipart/form-data')
++  @ApiBody({
++    schema: {
++      type: 'object',
++      properties: {
++        descricao_problema: { type: 'string' },
++        fotos: {
++          type: 'array',
++          items: { type: 'string', format: 'binary' },
++        },
++      },
++    },
++  })
++  @UseInterceptors(FilesInterceptor('fotos', 5))
++  async createRequest(
++    @CurrentUser('id') id_usuario: number,
++    @UploadedFiles() fotos: Express.Multer.File[],
++    @Body() dto: CreateRepairDto,
++  ) {
++    return this.service.createRequest(id_usuario, dto as any, fotos || []);
+   }
+ 
+   @Get('my-requests')
+@@ -32,8 +54,13 @@ export class RepairsController {
+   }
+ 
+   @Patch(':id/respond')
++  @UseGuards(RolesGuard)
++  @Roles('admin')
+   @ApiOperation({ summary: 'Respond to repair request (admin)' })
+-  async respondToRequest(@Param('id') id: string, @Body() dto: RespondRepairDto) {
++  async respondToRequest(@Param('id') id: string, @Body() body: any) {
++    const dto: RespondRepairDto = {
++      status_solicitacao: body.status_solicitacao ?? body.status,
++    };
+     return this.service.respondToRequest(+id, dto);
+   }
+ }
+\ No newline at end of file
+diff --git a/src/modules/repairs/repairs.module.ts b/src/modules/repairs/repairs.module.ts
+index 5184311..07e9e8b 100644
+--- a/src/modules/repairs/repairs.module.ts
++++ b/src/modules/repairs/repairs.module.ts
+@@ -1,12 +1,48 @@
+ import { Module } from '@nestjs/common';
++import { MulterModule } from '@nestjs/platform-express';
+ import { RepairsRepository } from './repairs.repository';
+ import { RepairsService } from './repairs.service';
+ import { RepairsController } from './repairs.controller';
++import { AdminRepairsController } from './admin-repairs.controller';
+ import { PrismaModule } from '@/prisma/prisma.module';
++import { diskStorage } from 'multer';
++import * as path from 'path';
++import { randomBytes } from 'crypto';
++
++function extFromMime(mime: string, originalName?: string) {
++  const map: Record<string, string> = {
++    'image/jpeg': '.jpg',
++    'image/jpg': '.jpg',
++    'image/png': '.png',
++    'image/gif': '.gif',
++    'image/webp': '.webp',
++  };
++  if (map[mime]) return map[mime];
++  if (originalName) return path.extname(originalName) || '';
++  return '';
++}
+ 
+ @Module({
+-  imports: [PrismaModule],
++  imports: [
++    PrismaModule,
++    MulterModule.register({
++      storage: diskStorage({
++        destination: './uploads/repairs',
++        filename: (req, file, cb) => {
++          const rnd = randomBytes(16).toString('hex');
++          const ext = extFromMime(file.mimetype, file.originalname);
++          cb(null, `${rnd}${ext}`);
++        },
++      }),
++      fileFilter: (req, file, cb) => {
++        if (/^image\//.test(file.mimetype)) cb(null, true);
++        else cb(new Error('Only image files are allowed'), false);
++      },
++      limits: { fileSize: 5 * 1024 * 1024, files: 5 },
++    }),
++  ],
+   providers: [RepairsRepository, RepairsService],
+-  controllers: [RepairsController],
++  controllers: [RepairsController, AdminRepairsController],
++  exports: [RepairsService],
+ })
+ export class RepairsModule {}
+\ No newline at end of file
+diff --git a/src/modules/repairs/repairs.repository.ts b/src/modules/repairs/repairs.repository.ts
+index 864adff..6aff889 100644
+--- a/src/modules/repairs/repairs.repository.ts
++++ b/src/modules/repairs/repairs.repository.ts
+@@ -7,12 +7,21 @@ import { RespondRepairDto } from './dto/respond-repair.dto';
+ export class RepairsRepository {
+   constructor(private prisma: PrismaService) {}
+ 
+-  async createRequest(id_usuario: number, dto: CreateRepairDto) {
++  async createRequest(id_usuario: number, dto: CreateRepairDto, fotos: Express.Multer.File[] = []) {
++    const data: any = {
++      ...dto,
++      id_usuario,
++    };
++
++    if (fotos && fotos.length) {
++      data.fotos = {
++        create: fotos.map((f) => ({ url_foto: `/uploads/repairs/${f.filename}` })),
++      };
++    }
++
+     return this.prisma.solicitacaoReforma.create({
+-      data: {
+-        ...dto,
+-        id_usuario,
+-      },
++      data,
++      include: { fotos: true },
+     });
+   }
+ 
+@@ -35,6 +44,33 @@ export class RepairsRepository {
+     });
+   }
+ 
++  async findAllAdmin(opts: { page: number; limit: number; status?: string; q?: string; sort?: string }) {
++    const { page, limit, status, q, sort } = opts;
++    const where: any = {};
++    if (status) where.status_solicitacao = status;
++    if (q) where.descricao_problema = { contains: q, mode: 'insensitive' };
++
++    const orderBy: any = {};
++    if (sort === 'oldest') orderBy.data_solicitacao = 'asc';
++    else orderBy.data_solicitacao = 'desc';
++
++    const take = Math.min(100, Math.max(1, limit || 20));
++    const skip = Math.max(0, (Math.max(1, page || 1) - 1) * take);
++
++    const [data, total] = await Promise.all([
++      this.prisma.solicitacaoReforma.findMany({
++        where,
++        orderBy,
++        skip,
++        take,
++        include: { fotos: true, usuario: { select: { id_usuario: true, nome: true, email: true } } },
++      }),
++      this.prisma.solicitacaoReforma.count({ where }),
++    ]);
++
++    return { data, total };
++  }
++
+   async respondToRequest(id_solicitacao: number, dto: RespondRepairDto) {
+     return this.prisma.solicitacaoReforma.update({
+       where: { id_solicitacao },
+diff --git a/src/modules/repairs/repairs.service.ts b/src/modules/repairs/repairs.service.ts
+index b7b6ab2..8421946 100644
+--- a/src/modules/repairs/repairs.service.ts
++++ b/src/modules/repairs/repairs.service.ts
+@@ -7,8 +7,8 @@ import { RespondRepairDto } from './dto/respond-repair.dto';
+ export class RepairsService {
+   constructor(private repository: RepairsRepository) {}
+ 
+-  async createRequest(id_usuario: number, dto: CreateRepairDto) {
+-    return this.repository.createRequest(id_usuario, dto);
++  async createRequest(id_usuario: number, dto: CreateRepairDto, fotos?: Express.Multer.File[]) {
++    return this.repository.createRequest(id_usuario, dto, fotos || []);
+   }
+ 
+   async getMyRequests(id_usuario: number) {
+@@ -22,4 +22,8 @@ export class RepairsService {
+   async respondToRequest(id_solicitacao: number, dto: RespondRepairDto) {
+     return this.repository.respondToRequest(id_solicitacao, dto);
+   }
++
++  async findAllAdmin(opts: { page: number; limit: number; status?: string; q?: string; sort?: string }) {
++    return this.repository.findAllAdmin(opts);
++  }
+ }
+\ No newline at end of file
+diff --git a/src/modules/requests/requests.controller.ts b/src/modules/requests/requests.controller.ts
+new file mode 100644
+index 0000000..98cbd2f
+--- /dev/null
++++ b/src/modules/requests/requests.controller.ts
+@@ -0,0 +1,51 @@
++import { Controller, Get, UseGuards, Param, Patch } from '@nestjs/common';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { CurrentUser } from '@/core/decorators/current-user.decorator';
++import { RequestsService } from './requests.service';
++
++@Controller('requests')
++@ApiTags('Requests')
++@ApiBearerAuth('JWT')
++@UseGuards(JwtAuthGuard)
++export class RequestsController {
++  constructor(private service: RequestsService) {}
++
++  @Get('my-requests')
++  @ApiOperation({ summary: 'Get user offers and repair requests' })
++  async myRequests(@CurrentUser('id') id_usuario: number) {
++    return this.service.getMyRequests(id_usuario);
++  }
++}
++
++@Controller('admin/requests')
++@ApiTags('AdminRequests')
++@UseGuards(JwtAuthGuard, RolesGuard)
++@ApiBearerAuth('JWT')
++export class AdminRequestsController {
++  constructor(private service: RequestsService) {}
++
++  @Get('pending')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Get pending offers and repairs for admin review' })
++  async pending() {
++    return this.service.getAdminPending();
++  }
++
++  @Patch('offers/:id/respond')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Respond to offer (admin)' })
++  async respondOffer(@Param('id') id: string, @Param() params: any) {
++    // controller keeps signature minimal; callers should use existing Offers.dto
++    return this.service.respondToOffer(Number(id), params.body || {});
++  }
++
++  @Patch('repairs/:id/respond')
++  @Roles('admin')
++  @ApiOperation({ summary: 'Respond to repair request (admin)' })
++  async respondRepair(@Param('id') id: string, @Param() params: any) {
++    return this.service.respondToRepair(Number(id), params.body || {});
++  }
++}
+diff --git a/src/modules/requests/requests.module.ts b/src/modules/requests/requests.module.ts
+new file mode 100644
+index 0000000..ec3dd14
+--- /dev/null
++++ b/src/modules/requests/requests.module.ts
+@@ -0,0 +1,13 @@
++import { Module } from '@nestjs/common';
++import { RequestsService } from './requests.service';
++import { RequestsController, AdminRequestsController } from './requests.controller';
++import { OffersModule } from '../offers/offers.module';
++import { RepairsModule } from '../repairs/repairs.module';
++
++@Module({
++  imports: [OffersModule, RepairsModule],
++  providers: [RequestsService],
++  controllers: [RequestsController, AdminRequestsController],
++  exports: [RequestsService],
++})
++export class RequestsModule {}
+diff --git a/src/modules/requests/requests.service.ts b/src/modules/requests/requests.service.ts
+new file mode 100644
+index 0000000..941174b
+--- /dev/null
++++ b/src/modules/requests/requests.service.ts
+@@ -0,0 +1,31 @@
++import { Injectable } from '@nestjs/common';
++import { OffersService } from '../offers/offers.service';
++import { RepairsService } from '../repairs/repairs.service';
++
++@Injectable()
++export class RequestsService {
++  constructor(private offers: OffersService, private repairs: RepairsService) {}
++
++  async getMyRequests(id_usuario: number) {
++    const [offers, repairs] = await Promise.all([
++      this.offers.getMyOffers(id_usuario),
++      this.repairs.getMyRequests(id_usuario),
++    ]);
++    return { offers, repairs };
++  }
++
++  async getAdminPending() {
++    const [allOffers, allRepairs] = await Promise.all([this.offers.getAllOffers(), this.repairs.getAllRequests()]);
++    const pendingOffers = (allOffers || []).filter((o: any) => (o.status_oferta || o.status) === 'pendente');
++    const pendingRepairs = (allRepairs || []).filter((r: any) => (r.status_solicitacao || r.status) === 'pendente');
++    return { pendingOffers, pendingRepairs };
++  }
++
++  async respondToOffer(id_oferta: number, dto: any) {
++    return this.offers.respondToOffer(id_oferta, dto);
++  }
++
++  async respondToRepair(id_solicitacao: number, dto: any) {
++    return this.repairs.respondToRequest(id_solicitacao, dto);
++  }
++}
+diff --git a/src/modules/stock/stock.service.ts b/src/modules/stock/stock.service.ts
+index 94f7066..1f71c32 100644
+--- a/src/modules/stock/stock.service.ts
++++ b/src/modules/stock/stock.service.ts
+@@ -1,6 +1,7 @@
+ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+ import { BookRepository } from '@/modules/books/book.repository';
+ import { StockRepository } from './stock.repository';
++import { DecimalHelper } from '@/shared/utils/decimal.helper';
+ import { Prisma } from '@prisma/client';
+ 
+ interface ICreateStockItem {
+@@ -39,7 +40,11 @@ export class StockService {
+       },
+     });
+ 
+-    return stockItem;
++    // Retorna o item criado com preço formatado
++    return {
++      ...stockItem,
++      preco: DecimalHelper.toString(stockItem.preco)
++    };
+   }
+ 
+   async update(id_estoque: number, data: Prisma.EstoqueUpdateInput) {
+@@ -48,7 +53,11 @@ export class StockService {
+       throw new NotFoundException('Item de estoque não encontrado.');
+     }
+ 
+-    return this.stockRepository.update(id_estoque, data);
++    const updatedItem = await this.stockRepository.update(id_estoque, data);
++    return {
++      ...updatedItem,
++      preco: DecimalHelper.toString(updatedItem.preco)
++    };
+   }
+ 
+ }
+\ No newline at end of file
+diff --git a/src/shared/utils/decimal.helper.ts b/src/shared/utils/decimal.helper.ts
+new file mode 100644
+index 0000000..bb21aa8
+--- /dev/null
++++ b/src/shared/utils/decimal.helper.ts
+@@ -0,0 +1,86 @@
++import { Prisma } from '@prisma/client';
++
++/**
++ * Utilitário para conversão de valores Decimal do Prisma
++ */
++export class DecimalHelper {
++  
++  /**
++   * Converte Decimal para string formatada com 2 casas decimais
++   */
++  static toString(decimal: any): string {
++    if (!decimal) return '0.00';
++    
++    try {
++      // Se for uma instância de Decimal do Prisma
++      if (decimal instanceof Prisma.Decimal) {
++        return decimal.toFixed(2);
++      }
++      
++      // Se for um objeto com estrutura de Decimal {s, e, d}
++      if (this.isDecimalObject(decimal)) {
++        return this.decimalObjectToNumber(decimal).toFixed(2);
++      }
++
++      // Se for um número
++      if (typeof decimal === 'number') {
++        return decimal.toFixed(2);
++      }
++
++      // Se for uma string que representa um número
++      if (typeof decimal === 'string' && !isNaN(parseFloat(decimal))) {
++        return parseFloat(decimal).toFixed(2);
++      }
++
++      return '0.00';
++    } catch (error) {
++      console.warn('Erro ao converter decimal:', error, decimal);
++      return '0.00';
++    }
++  }
++
++  /**
++   * Converte Decimal para número
++   */
++  static toNumber(decimal: any): number {
++    const str = this.toString(decimal);
++    return parseFloat(str);
++  }
++
++  /**
++   * Verifica se um objeto é um Decimal do Prisma
++   */
++  private static isDecimalObject(obj: any): boolean {
++    return (
++      typeof obj === 'object' &&
++      obj !== null &&
++      's' in obj &&
++      'e' in obj &&
++      'd' in obj &&
++      Array.isArray(obj.d)
++    );
++  }
++
++  /**
++   * Converte um objeto decimal {s, e, d} para número
++   */
++  private static decimalObjectToNumber(obj: any): number {
++    try {
++      const sign = obj.s || 1;
++      const exponent = obj.e || 0;
++      const digits = obj.d || [0];
++      
++      let numStr = digits.join('');
++      let num = parseFloat(numStr);
++      
++      if (exponent !== 0) {
++        num = num * Math.pow(10, exponent - digits.length + 1);
++      }
++      
++      return num * sign;
++    } catch (error) {
++      console.warn('Erro ao converter objeto decimal:', error, obj);
++      return 0;
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/src/shared/utils/status.util.ts b/src/shared/utils/status.util.ts
+new file mode 100644
+index 0000000..e507fb6
+--- /dev/null
++++ b/src/shared/utils/status.util.ts
+@@ -0,0 +1,25 @@
++export function mapOrderStatusToLabel(status?: string): string {
++  if (!status) return 'desconhecido';
++  const v = String(status).toLowerCase();
++  switch (v) {
++    case 'paid':
++    case 'succeeded':
++    case 'approved':
++      return 'aprovado';
++    case 'pending':
++    case 'processing':
++      return 'pendente';
++    case 'failed':
++    case 'rejected':
++    case 'rejected_by_network':
++      return 'rejeitado';
++    case 'canceled':
++    case 'cancelled':
++      return 'cancelado';
++    case 'refunded':
++    case 'chargeback':
++      return 'estornado';
++    default:
++      return v;
++  }
++}
+diff --git a/uploads/repairs/732e5d3849551c75768aecd38cd976b3.jpg b/uploads/repairs/732e5d3849551c75768aecd38cd976b3.jpg
+new file mode 100644
+index 0000000..680fe94
+Binary files /dev/null and b/uploads/repairs/732e5d3849551c75768aecd38cd976b3.jpg differ

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BookRepository } from './book.repository';
+import { DecimalHelper } from '@/shared/utils/decimal.helper';
 
 @Injectable()
 export class BookService {
@@ -76,7 +77,7 @@ export class BookService {
       id_estoque: s.id_estoque,
       id_livro: s.id_livro,
       quantidade: s.quantidade,
-      preco: this.formatDecimalToPrice(s.preco),
+      preco: DecimalHelper.toString(s.preco),
       condicao: s.condicao,
     }));
 
@@ -119,6 +120,28 @@ export class BookService {
     }));
   }
 
+  async getPendingReviews() {
+    const reviews = await this.repository.findPendingReviews();
+    return (reviews || []).map((r: any) => ({
+      id_avaliacao: r.id_avaliacao,
+      id_livro: r.id_livro,
+      livro: r.livro ? { id_livro: r.livro.id_livro, titulo: r.livro.titulo } : undefined,
+      id_usuario: r.id_usuario,
+      nota: r.nota,
+      comentario: r.comentario,
+      data_avaliacao: r.data_avaliacao,
+      usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
+    }));
+  }
+
+  async approveReview(id_avaliacao: number) {
+    return { success: true };
+  }
+
+  async rejectReview(id_avaliacao: number) {
+    return this.repository.deleteReview(id_avaliacao);
+  }
+
   async createReview(id_livro: number, id_usuario: number, dto: { nota: number; comentario?: string }) {
     const livro = await this.repository.findById(id_livro);
     if (!livro) throw new NotFoundException('Livro não encontrado.');
@@ -139,21 +162,7 @@ export class BookService {
     };
   }
 
-   private formatDecimalToPrice(precoRaw: any): string | null {
-    if (precoRaw === null || precoRaw === undefined) return null;
-    try {
-      let precoStr: string;
-      if (typeof precoRaw === 'object' && typeof precoRaw.toString === 'function') {
-        precoStr = precoRaw.toString();
-      } else {
-        precoStr = String(precoRaw);
-      }
-      const num = Number(precoStr);
-      return Number.isFinite(num) ? num.toFixed(2) : null;
-    } catch (e) {
-      return null;
-    }
-  }
+
 
   private findLowestPriceInfo(estoqueArr: any[]): { preco: string | null; id_estoque: number | null } {
     if (!Array.isArray(estoqueArr) || estoqueArr.length === 0) return { preco: null, id_estoque: null };
@@ -163,10 +172,9 @@ export class BookService {
 
     for (const s of estoqueArr) {
       const precoRaw = s && s.preco;
-      const precoStr = this.formatDecimalToPrice(precoRaw);
-      if (precoStr === null) continue;
-      const num = Number(precoStr);
-      if (min === null || num < min) {
+      const num = DecimalHelper.toNumber(precoRaw);
+      
+      if (num > 0 && (min === null || num < min)) {
         min = num;
         minId = s.id_estoque ?? null;
       }

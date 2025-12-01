@@ -39,15 +39,40 @@ export class CartRepository {
     });
   }
 
+  async removeItem(id_carrinho_item: number) {
+    return this.prisma.carrinhoItem.delete({
+      where: { id_carrinho_item },
+    });
+  }
+
+  async removeAllItems(id_carrinho: number) {
+    return this.prisma.carrinhoItem.deleteMany({
+      where: { id_carrinho },
+    });
+  }
+
   async findCartWithDetailsByUserId(id_usuario: number) {
     return this.prisma.carrinho.findUnique({
-      where: { id_usuario },
+      where: { id_usuario: id_usuario },
       include: {
         itens: {
           include: {
             estoque: { 
               include: {
-                livro: true,
+                livro: {
+                  include: {
+                    autores: {
+                      include: {
+                        autor: true,
+                      },
+                    },
+                    generos: {
+                      include: {
+                        genero: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
