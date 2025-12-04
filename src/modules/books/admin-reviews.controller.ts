@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Delete, Post } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -19,7 +19,7 @@ export class AdminReviewsController {
     return this.service.getPendingReviews();
   }
 
-  @Patch(':id/approve')
+  @Post(':id/approve')
   @Roles('admin')
   @ApiOperation({ summary: 'Approve a review' })
   async approve(@Param('id') id: string) {
@@ -33,3 +33,4 @@ export class AdminReviewsController {
     return this.service.rejectReview(Number(id));
   }
 }
+

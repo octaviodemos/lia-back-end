@@ -142,6 +142,44 @@ npm run dev
 ```
 O servidor estará rodando em `http://localhost:3333` (ou na porta que você definiu no seu `.env`).
 
+**Testando webhooks Stripe (local)**
+
+Se você integrou o Stripe e quer testar webhooks localmente, siga um destes caminhos:
+
+- Usando o Stripe CLI (recomendado - simula assinatura corretamente):
+
+```bash
+# inicie a aplicação (em outro terminal)
+npm run dev
+
+# no terminal novo, autentique e então escute e encaminhe eventos para seu endpoint
+stripe login
+stripe listen --forward-to http://localhost:3333/api/payments/webhook
+
+# o comando `stripe listen` exibirá um "Local webhook signing secret" (whsec_...)
+# exporte essa variável e sua chave de teste do Stripe no terminal onde roda o servidor:
+export STRIPE_WEBHOOK_SECRET=whsec_xxx
+export STRIPE_SECRET_KEY=sk_test_xxx
+
+# dispare um evento de teste (ex.: checkout.session.completed)
+stripe trigger checkout.session.completed
+```
+
+O endpoint real (com validação de assinatura) é `POST /api/payments/webhook`. O `Stripe CLI` envia o header `stripe-signature` e o payload raw — o projeto já está configurado para aceitar o corpo raw nessa rota.
+
+- Método rápido sem assinatura (apenas dev):
+
+Use o endpoint `POST /api/payments/webhook-dev` para simular o processamento do mesmo fluxo sem validação de assinatura — útil para testes rápidos locais.
+
+```bash
+curl -X POST http://localhost:3333/api/payments/webhook-dev \
+    -H "Content-Type: application/json" \
+    -d '{"eventType":"checkout.session.completed","sessionId":"cs_test_XXXXXXXX"}'
+```
+
+Nota: o `webhook-dev` deve ser usado apenas em ambiente de desenvolvimento (o código verifica `NODE_ENV`).
+
+
 **7. Acesse a documentação (Swagger):**
 
 Após iniciar a aplicação, a UI do Swagger fica disponível em:

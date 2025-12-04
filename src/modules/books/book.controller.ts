@@ -43,9 +43,11 @@ export class BookController {
   @Get(':id/avaliacoes')
   @ApiOperation({ summary: 'List reviews for a book' })
   @ApiResponse({ status: 200, description: 'List of reviews', type: () => [AvaliacaoDto] })
-  async getReviews(@Param('id') id: string) {
+  async getReviews(@Param('id') id: string, @Req() req: any) {
     try {
-      return await this.service.getReviews(Number(id));
+      const user = req.user as any;
+      const userId = user?.id_usuario || user?.sub || user?.id;
+      return await this.service.getReviewsWithUser(Number(id), userId);
     } catch (error: any) {
       throw new HttpException('Erro ao buscar avaliações.', HttpStatus.INTERNAL_SERVER_ERROR);
     }

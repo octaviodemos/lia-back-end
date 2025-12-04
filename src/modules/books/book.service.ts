@@ -108,7 +108,7 @@ export class BookService {
   }
 
   async getReviews(id_livro: number) {
-    const reviews = await this.repository.findReviewsByBook(id_livro);
+    const reviews = await this.repository.findApprovedReviewsWithReactions(id_livro);
     return (reviews || []).map((r: any) => ({
       id_avaliacao: r.id_avaliacao,
       id_livro: r.id_livro,
@@ -117,7 +117,58 @@ export class BookService {
       comentario: r.comentario,
       data_avaliacao: r.data_avaliacao,
       usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
+      likes: r.likes ?? 0,
+      dislikes: r.dislikes ?? 0,
+      userReaction: r.userReaction ?? null,
     }));
+  }
+
+  async getReviewsWithUser(id_livro: number, id_usuario?: number) {
+    const reviews = await this.repository.findApprovedReviewsWithReactions(id_livro, id_usuario);
+    return (reviews || []).map((r: any) => ({
+      id_avaliacao: r.id_avaliacao,
+      id_livro: r.id_livro,
+      id_usuario: r.id_usuario,
+      nota: r.nota,
+      comentario: r.comentario,
+      data_avaliacao: r.data_avaliacao,
+      usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
+      likes: r.likes ?? 0,
+      dislikes: r.dislikes ?? 0,
+      userReaction: r.userReaction ?? null,
+    }));
+  }
+
+  async getReactionsForReview(id_avaliacao: number, id_usuario?: number) {
+    const counts = await this.repository.countReactionsForReview(id_avaliacao);
+    const result: any = { likes: counts.likes, dislikes: counts.dislikes };
+    if (id_usuario) {
+      const user = await this.repository.getUserReactionForReview(id_avaliacao, id_usuario);
+      result.userReaction = user?.tipo ?? null;
+    } else {
+      result.userReaction = null;
+    }
+    return result;
+  }
+
+  async postReactionForReview(id_avaliacao: number, id_usuario: number, tipo: 'LIKE' | 'DISLIKE') {
+    const existing = await this.repository.getUserReactionForReview(id_avaliacao, id_usuario);
+    if (!existing) {
+      await this.repository.createReactionForReview(id_avaliacao, id_usuario, tipo);
+    } else if (existing.tipo === tipo) {
+      await this.repository.deleteReactionForReview(id_avaliacao, id_usuario);
+    } else {
+      await this.repository.updateReactionForReview(id_avaliacao, id_usuario, tipo);
+    }
+    const counts = await this.repository.countReactionsForReview(id_avaliacao);
+    const user = await this.repository.getUserReactionForReview(id_avaliacao, id_usuario);
+    return { userReaction: user?.tipo ?? null, likes: counts.likes, dislikes: counts.dislikes };
+  }
+
+  async deleteReactionForReview(id_avaliacao: number, id_usuario: number) {
+    await this.repository.deleteReactionForReview(id_avaliacao, id_usuario);
+    const counts = await this.repository.countReactionsForReview(id_avaliacao);
+    return { userReaction: null, likes: counts.likes, dislikes: counts.dislikes };
   }
 
   async getPendingReviews() {
@@ -135,7 +186,7 @@ export class BookService {
   }
 
   async approveReview(id_avaliacao: number) {
-    return { success: true };
+    return this.repository.approveReview(id_avaliacao);
   }
 
   async rejectReview(id_avaliacao: number) {
