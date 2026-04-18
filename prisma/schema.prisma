@@ -37,9 +37,11 @@ model Usuario {
   ofertas_venda        OfertaVenda[]
   solicitacoes_reforma SolicitacaoReforma[]
   avaliacoes           Avaliacao[]
+  avaliacao_reacoes    AvaliacaoReacao[]
   publicacoes          Publicacao[]
   publicacao_comentarios PublicacaoComentario[]
   publicacao_curtidas  PublicacaoCurtida[]
+  
 
   @@map("usuarios")
 }
@@ -258,10 +260,12 @@ model Avaliacao {
   id_usuario     Int
   nota           Int
   comentario     String?  @db.Text
+  aprovado       Boolean  @default(false)
   data_avaliacao DateTime @default(now())
 
   livro   Livro   @relation(fields: [id_livro], references: [id_livro])
   usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+  reacoes  AvaliacaoReacao[]
 
   @@map("avaliacoes")
 }
@@ -276,6 +280,7 @@ model Publicacao {
   usuario     Usuario                @relation(fields: [id_usuario], references: [id_usuario])
   comentarios PublicacaoComentario[]
   curtidas    PublicacaoCurtida[]
+  
 
   @@map("publicacoes")
 }
@@ -285,6 +290,7 @@ model PublicacaoComentario {
   id_publicacao   Int
   id_usuario      Int
   conteudo        String   @db.Text
+  aprovado        Boolean  @default(false)
   data_comentario DateTime @default(now())
   publicacao Publicacao @relation(fields: [id_publicacao], references: [id_publicacao])
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
@@ -292,16 +298,39 @@ model PublicacaoComentario {
   @@map("publicacao_comentarios")
 }
 
+model AvaliacaoReacao {
+  id_avaliacao Int
+  id_usuario   Int
+  tipo         ReactionType
+  created_at   DateTime @default(now())
+
+  avaliacao Avaliacao @relation(fields: [id_avaliacao], references: [id_avaliacao])
+  usuario   Usuario   @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@id([id_avaliacao, id_usuario])
+  @@map("avaliacao_reacoes")
+  @@index([id_avaliacao])
+}
+ 
+
 model PublicacaoCurtida {
   id_publicacao Int
   id_usuario    Int
-
   publicacao Publicacao @relation(fields: [id_publicacao], references: [id_publicacao])
   usuario    Usuario    @relation(fields: [id_usuario], references: [id_usuario])
+  tipo       ReactionType
+  created_at DateTime @default(now())
 
   @@id([id_publicacao, id_usuario])
   @@map("publicacao_curtidas")
 }
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+
 
 
 // --- Grupo 5: Tabelas-Pivô (Muitos-para-Muitos) ---

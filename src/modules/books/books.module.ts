@@ -5,6 +5,7 @@ import { BookService } from './book.service';
 import { BookController } from './book.controller';
 import { AdminReviewsController } from './admin-reviews.controller';
 import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer-image-disk';
+import { AvaliacaoReactionsController } from './reactions.controller';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer
     }),
   ],
   controllers: [BookController, AdminReviewsController],
+  controllers: [BookController, AdminReviewsController, AvaliacaoReactionsController],
   providers: [BookService, BookRepository],
   exports: [BookService],
 })
