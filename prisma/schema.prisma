@@ -47,12 +47,14 @@ model Usuario {
 }
 
 model Livro {
-  id_livro       Int      @id @default(autoincrement())
-  titulo         String   @db.VarChar(255)
-  sinopse        String?  @db.Text
-  editora        String?  @db.VarChar(255)
-  ano_publicacao Int?
-  isbn           String?  @unique @db.VarChar(20)
+  id_livro                 Int      @id @default(autoincrement())
+  titulo                   String   @db.VarChar(255)
+  sinopse                  String?  @db.Text
+  editora                  String?  @db.VarChar(255)
+  ano_publicacao           Int?
+  isbn                     String?  @unique @db.VarChar(20)
+  nota_conservacao        Int      @default(5)
+  descricao_conservacao  String?  @db.Text
 
   estoque    Estoque[]
   autores    LivroAutor[]

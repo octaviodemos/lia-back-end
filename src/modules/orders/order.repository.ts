@@ -32,6 +32,8 @@ export class OrderRepository {
                   select: {
                     id_livro: true,
                     titulo: true,
+                    nota_conservacao: true,
+                    descricao_conservacao: true,
                     imagens: true,
                   },
                 },

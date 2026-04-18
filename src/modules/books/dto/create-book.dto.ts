@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsInt } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBookDto {
@@ -28,4 +28,16 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   isbn?: string;
+
+  @ApiProperty({ example: 5, description: 'Nota de 1 a 5 (estado físico do exemplar)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  nota_conservacao!: number;
+
+  @ApiProperty({ example: 'Leves marcas na lombada', required: false })
+  @IsOptional()
+  @IsString()
+  descricao_conservacao?: string;
 }

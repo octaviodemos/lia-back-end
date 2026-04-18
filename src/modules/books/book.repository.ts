@@ -28,6 +28,8 @@ export class BookRepository {
         editora: true,
         ano_publicacao: true,
         isbn: true,
+        nota_conservacao: true,
+        descricao_conservacao: true,
         imagens: true,
         autores: {
           select: {
@@ -62,6 +64,14 @@ export class BookRepository {
     });
   }
 
+  async update(id_livro: number, data: Prisma.LivroUpdateInput) {
+    return this.prisma.livro.update({
+      where: { id_livro },
+      data,
+      include: { imagens: true },
+    });
+  }
+
   async findById(id_livro: number) {
     return this.prisma.livro.findUnique({
       where: { id_livro },
@@ -72,6 +82,8 @@ export class BookRepository {
         editora: true,
         ano_publicacao: true,
         isbn: true,
+        nota_conservacao: true,
+        descricao_conservacao: true,
         imagens: true,
         autores: {
           select: {

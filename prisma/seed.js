@@ -101,6 +101,8 @@ async function importBooks() {
           editora: b.editora || null,
           ano_publicacao: b.ano_publicacao || null,
           isbn: b.isbn || null,
+          nota_conservacao: 5,
+          descricao_conservacao: null,
           imagens: b.capa_url
             ? {
                 create: [{ url_imagem: b.capa_url, tipo_imagem: TipoImagem.Capa }],

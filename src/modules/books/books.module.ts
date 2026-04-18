@@ -15,7 +15,6 @@ import { AvaliacaoReactionsController } from './reactions.controller';
       limits: { fileSize: 5 * 1024 * 1024, files: 25 },
     }),
   ],
-  controllers: [BookController, AdminReviewsController],
   controllers: [BookController, AdminReviewsController, AvaliacaoReactionsController],
   providers: [BookService, BookRepository],
   exports: [BookService],

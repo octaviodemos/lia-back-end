@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -14,6 +15,7 @@ import {
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { BookService } from './book.service';
 import { CreateBookDto } from './dto/create-book.dto';
+import { UpdateBookDto } from './dto/update-book.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -37,19 +39,6 @@ export class BookController {
       return await this.service.findAll();
     } catch (error: any) {
       throw new HttpException('Erro ao buscar livros.', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a book by id' })
-  @ApiResponse({ status: 200, description: 'Book detail with stock info', type: () => BookDetailDto })
-  async findById(@Param('id') id: string) {
-    try {
-      const book = await this.service.findById(Number(id));
-      return book;
-    } catch (error: any) {
-      if (error instanceof HttpException) throw error;
-      throw new HttpException('Erro ao buscar livro.', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -80,6 +69,37 @@ export class BookController {
     }
   }
 
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Update book (admin)' })
+  @ApiResponse({ status: 200, description: 'Book updated' })
+  async update(@Param('id') id: string, @Body() body: UpdateBookDto) {
+    try {
+      return await this.service.update(Number(id), body);
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+      if (error?.code === 'P2002') {
+        throw new HttpException(error.message || 'Conflito de dados (campo único).', HttpStatus.CONFLICT);
+      }
+      const msg = error && error.message ? error.message : 'Erro ao atualizar livro';
+      throw new HttpException(msg, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a book by id' })
+  @ApiResponse({ status: 200, description: 'Book detail with stock info', type: () => BookDetailDto })
+  async findById(@Param('id') id: string) {
+    try {
+      const book = await this.service.findById(Number(id));
+      return book;
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Erro ao buscar livro.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -88,13 +108,15 @@ export class BookController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['titulo'],
+      required: ['titulo', 'nota_conservacao'],
       properties: {
         titulo: { type: 'string' },
         sinopse: { type: 'string' },
         editora: { type: 'string' },
         ano_publicacao: { type: 'integer' },
         isbn: { type: 'string' },
+        nota_conservacao: { type: 'integer', minimum: 1, maximum: 5 },
+        descricao_conservacao: { type: 'string' },
         imagem_Capa: { type: 'string', format: 'binary' },
         imagem_Contracapa: { type: 'string', format: 'binary' },
         imagem_Lombada: { type: 'string', format: 'binary' },

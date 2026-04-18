@@ -4,6 +4,7 @@ import { BookRepository } from './book.repository';
 import { DecimalHelper } from '@/shared/utils/decimal.helper';
 import { tipoImagemFromMulterFieldname } from '@/shared/utils/tipo-imagem-multer.util';
 import { CreateBookDto } from './dto/create-book.dto';
+import { UpdateBookDto } from './dto/update-book.dto';
 
 @Injectable()
 export class BookService {
@@ -31,6 +32,8 @@ export class BookService {
       editora: dto.editora || null,
       ano_publicacao: dto.ano_publicacao ?? null,
       isbn: dto.isbn || null,
+      nota_conservacao: dto.nota_conservacao,
+      descricao_conservacao: dto.descricao_conservacao ?? null,
     };
 
     if (imagemCreates.length) {
@@ -39,6 +42,31 @@ export class BookService {
 
     const created = await this.repository.create(livroData);
     return this.mapLivroDetalhe(created as any);
+  }
+
+  async update(id_livro: number, dto: UpdateBookDto) {
+    const existing = await this.repository.findById(id_livro);
+    if (!existing) {
+      throw new NotFoundException('Livro não encontrado.');
+    }
+
+    const data: Prisma.LivroUpdateInput = {};
+    if (dto.titulo !== undefined) data.titulo = dto.titulo;
+    if (dto.sinopse !== undefined) data.sinopse = dto.sinopse;
+    if (dto.editora !== undefined) data.editora = dto.editora;
+    if (dto.ano_publicacao !== undefined) data.ano_publicacao = dto.ano_publicacao;
+    if (dto.isbn !== undefined) data.isbn = dto.isbn;
+    if (dto.nota_conservacao !== undefined) data.nota_conservacao = dto.nota_conservacao;
+    if (dto.descricao_conservacao !== undefined) {
+      data.descricao_conservacao = dto.descricao_conservacao || null;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return this.mapLivroDetalhe(existing as any);
+    }
+
+    const updated = await this.repository.update(id_livro, data);
+    return this.mapLivroDetalhe(updated as any);
   }
 
   async findAll() {
@@ -71,6 +99,8 @@ export class BookService {
         editora: book.editora,
         ano_publicacao: book.ano_publicacao,
         isbn: book.isbn,
+        nota_conservacao: book.nota_conservacao,
+        descricao_conservacao: book.descricao_conservacao,
         imagens: this.mapImagensLivro(book.imagens),
         preco,
         id_estoque,
@@ -240,6 +270,8 @@ export class BookService {
       editora: book.editora,
       ano_publicacao: book.ano_publicacao,
       isbn: book.isbn,
+      nota_conservacao: book.nota_conservacao,
+      descricao_conservacao: book.descricao_conservacao,
       imagens: this.mapImagensLivro(book.imagens),
       estoque,
       generos,

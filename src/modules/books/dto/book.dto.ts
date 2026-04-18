@@ -30,6 +30,12 @@ export class BookDto {
   @ApiProperty({ example: '978-xxx', required: false })
   isbn?: string;
 
+  @ApiProperty({ example: 5 })
+  nota_conservacao!: number;
+
+  @ApiProperty({ example: 'Capa com leve desgaste', required: false })
+  descricao_conservacao?: string;
+
   @ApiProperty({ type: () => [LivroImagemDto], required: false })
   imagens?: LivroImagemDto[];
 
