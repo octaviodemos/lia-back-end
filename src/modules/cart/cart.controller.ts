@@ -17,7 +17,7 @@ export class CartController {
   @ApiOperation({ summary: 'Add an item to the authenticated user\'s cart' })
   @ApiResponse({ status: 201, description: 'Item added to cart' })
   async addItem(@Body() body: AddItemDto, @CurrentUser('id') id_usuario: number) {
-    return this.service.addItem({ id_usuario, id_estoque: body.id_estoque, quantidade: body.quantidade });
+    return this.service.addItem({ id_usuario, id_estoque: body.id_estoque });
   }
 
   @Get()

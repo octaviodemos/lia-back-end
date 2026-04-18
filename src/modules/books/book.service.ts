@@ -242,7 +242,7 @@ export class BookService {
     const estoque = (book.estoque || []).map((s: any) => ({
       id_estoque: s.id_estoque,
       id_livro: s.id_livro,
-      quantidade: s.quantidade,
+      disponivel: s.disponivel,
       preco: DecimalHelper.toString(s.preco),
       condicao: s.condicao,
     }));
@@ -286,7 +286,8 @@ export class BookService {
     let minId: number | null = null;
 
     for (const s of estoqueArr) {
-      const precoRaw = s && s.preco;
+      if (!s || s.disponivel === false) continue;
+      const precoRaw = s.preco;
       const num = DecimalHelper.toNumber(precoRaw);
 
       if (num > 0 && (min === null || num < min)) {

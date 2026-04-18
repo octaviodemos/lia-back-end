@@ -7,8 +7,8 @@ export class StockDto {
   @ApiProperty({ example: 1 })
   id_livro!: number;
 
-  @ApiProperty({ example: 10 })
-  quantidade!: number;
+  @ApiProperty({ example: true })
+  disponivel!: boolean;
 
   @ApiProperty({ example: '49.90' })
   preco!: string;

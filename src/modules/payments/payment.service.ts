@@ -34,7 +34,7 @@ export class PaymentService {
             product_data: { name: ci.estoque.livro?.titulo || ci.estoque.nome || 'Produto' },
             unit_amount: unit,
           },
-          quantity: Number(ci.quantidade || 1),
+          quantity: 1,
         };
       });
 

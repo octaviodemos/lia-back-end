@@ -42,27 +42,22 @@ export class OrderController {
     }
 
     const id_usuario: number = body?.id_usuario;
-    const items: Array<{ id_estoque: number; quantidade: number }> = body?.items;
+    const items: Array<{ id_estoque: number }> = body?.items;
     const paymentPayload = body?.paymentPayload ?? body;
 
     if (!id_usuario || !Array.isArray(items) || items.length === 0) {
-      throw new BadRequestException('Expected body: { id_usuario, items: [{id_estoque, quantidade}], paymentPayload? }');
+      throw new BadRequestException('Expected body: { id_usuario, items: [{ id_estoque }], paymentPayload? }');
     }
 
-    // Ensure cart exists
     const cart = await this.cartRepository.findOrCreateByUserId(id_usuario);
 
-    // Add items to cart (overwrite/create)
     for (const it of items) {
       const existing = await this.cartRepository.findItemInCart(cart.id_carrinho, it.id_estoque);
-      if (existing) {
-        await this.cartRepository.updateItemQuantity(existing.id_carrinho_item, it.quantidade);
-      } else {
-        await this.cartRepository.addItem(cart.id_carrinho, it.id_estoque, it.quantidade);
+      if (!existing) {
+        await this.cartRepository.addItem(cart.id_carrinho, it.id_estoque);
       }
     }
 
-    // Finalize order (will decrement stock atomically)
     const pedido = await this.service.finalizeOrderFromCart(id_usuario, paymentPayload);
     return { success: true, id_pedido: pedido.id_pedido };
   }

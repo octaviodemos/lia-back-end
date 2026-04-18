@@ -24,7 +24,6 @@ export class OrderRepository {
         itens: {
           select: {
             preco_unitario: true,
-            quantidade: true,
             estoque: {
               select: {
                 id_estoque: true,
@@ -47,8 +46,8 @@ export class OrderRepository {
   }
 
   /**
-   * Finalize an order from a user's cart: attempt to decrement stock for all items,
-   * create Pedido, ItemPedido and Pagamento, and clear the cart. All inside a transaction.
+   * Finalize an order from a user's cart: marca cada exemplar como indisponível,
+   * cria Pedido, ItemPedido e Pagamento, e limpa o carrinho. Tudo na mesma transação.
    */
   async finalizeOrderFromCart(id_usuario: number, paymentPayload: any) {
     return this.prisma.$transaction(async (tx) => {
@@ -61,20 +60,17 @@ export class OrderRepository {
         throw new Error('Carrinho vazio.');
       }
 
-      // Attempt to decrement stock for each item.
       for (const item of cart.itens) {
         const id_estoque = item.id_estoque;
-        const quantidade = item.quantidade;
-
         const updated = await tx.estoque.updateMany({
-          where: { id_estoque, quantidade: { gte: quantidade } },
-          data: { quantidade: { decrement: quantidade } },
+          where: { id_estoque, disponivel: true },
+          data: { disponivel: false },
         });
 
         if (updated.count === 0) {
           const maybeStock = await tx.estoque.findUnique({ where: { id_estoque } });
           if (!maybeStock) throw new Error(`Item de estoque não encontrado (id_estoque=${id_estoque}).`);
-          throw new Error(`Quantidade insuficiente para id_estoque=${id_estoque}.`);
+          throw new Error(`Exemplar indisponível (id_estoque=${id_estoque}).`);
         }
       }
 
@@ -88,7 +84,6 @@ export class OrderRepository {
       const itemsToCreate = cart.itens.map((it) => ({
         id_pedido: pedido.id_pedido,
         id_estoque: it.id_estoque,
-        quantidade: it.quantidade,
         preco_unitario: it.estoque.preco,
       }));
 

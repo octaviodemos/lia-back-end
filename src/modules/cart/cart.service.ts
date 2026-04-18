@@ -6,30 +6,32 @@ import { DecimalHelper } from '@/shared/utils/decimal.helper';
 interface IAddItem {
   id_usuario: number;
   id_estoque: number;
-  quantidade: number;
 }
 
 @Injectable()
 export class CartService {
   constructor(private cartRepository: CartRepository, private stockRepository: StockRepository) {}
 
-  async addItem({ id_usuario, id_estoque, quantidade }: IAddItem) {
-  const stockItem = await this.stockRepository.findById(id_estoque);
+  async addItem({ id_usuario, id_estoque }: IAddItem) {
+    const stockItem = await this.stockRepository.findById(id_estoque);
     if (!stockItem) throw new NotFoundException('Item de estoque não encontrado.');
-    if (stockItem.quantidade < quantidade) throw new BadRequestException('Quantidade solicitada indisponível no estoque.');
+    if (stockItem.disponivel === false) {
+      throw new BadRequestException('Este exemplar não está mais disponível.');
+    }
 
     const cart = await this.cartRepository.findOrCreateByUserId(id_usuario);
     const existingItem = await this.cartRepository.findItemInCart(cart.id_carrinho, id_estoque);
 
     if (existingItem) {
-      const novaQuantidade = existingItem.quantidade + quantidade;
-      if (stockItem.quantidade < novaQuantidade) {
-        throw new BadRequestException('Quantidade total solicitada excede o estoque disponível.');
-      }
-      return this.cartRepository.updateItemQuantity(existingItem.id_carrinho_item, novaQuantidade);
+      return {
+        added: false,
+        message: 'Item já está no carrinho.',
+        id_carrinho_item: existingItem.id_carrinho_item,
+      };
     }
 
-    return this.cartRepository.addItem(cart.id_carrinho, id_estoque, quantidade);
+    const created = await this.cartRepository.addItem(cart.id_carrinho, id_estoque);
+    return { added: true, id_carrinho_item: created.id_carrinho_item };
   }
 
   async getCart(id_usuario: number) {
@@ -44,19 +46,18 @@ export class CartService {
       };
     }
 
-    // Converte preços para strings, inclui dados do livro completos e calcula total
-    const itensFormatted = cart.itens.map(item => {
-      // Formatar autores
-      const autores = item.estoque.livro.autores?.map(la => ({
-        id_autor: la.autor.id_autor,
-        nome_completo: la.autor.nome_completo,
-      })) || [];
+    const itensFormatted = cart.itens.map((item) => {
+      const autores =
+        item.estoque.livro.autores?.map((la) => ({
+          id_autor: la.autor.id_autor,
+          nome_completo: la.autor.nome_completo,
+        })) || [];
 
-      // Formatar gêneros
-      const generos = item.estoque.livro.generos?.map(lg => ({
-        id_genero: lg.genero.id_genero,
-        nome: lg.genero.nome,
-      })) || [];
+      const generos =
+        item.estoque.livro.generos?.map((lg) => ({
+          id_genero: lg.genero.id_genero,
+          nome: lg.genero.nome,
+        })) || [];
 
       return {
         ...item,
@@ -73,19 +74,17 @@ export class CartService {
     });
 
     const total = cart.itens.reduce((acc, item) => {
-      return acc + item.quantidade * DecimalHelper.toNumber(item.estoque.preco);
+      return acc + DecimalHelper.toNumber(item.estoque.preco);
     }, 0);
 
-    return { 
-      ...cart, 
+    return {
+      ...cart,
       itens: itensFormatted,
-      total: total.toFixed(2) 
+      total: total.toFixed(2),
     };
   }
 
   async removeItem(_id_usuario: number, id_carrinho_item: number) {
-    // TODO: Adicionar validação para garantir que o item pertence ao usuário
-    // Por enquanto, deletamos diretamente por ID
     try {
       await this.cartRepository.removeItem(id_carrinho_item);
       return { message: 'Item removido do carrinho com sucesso' };

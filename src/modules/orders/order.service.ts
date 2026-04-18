@@ -108,8 +108,7 @@ export class OrderService {
     if (cloned.itens && cloned.itens.length > 0) {
       const total = cloned.itens.reduce((acc: number, it: any) => {
         const price = Number(it.preco_unitario ?? 0);
-        const qty = Number(it.quantidade ?? 0);
-        return acc + price * qty;
+        return acc + price;
       }, 0);
       cloned.valor_total = total;
       cloned.valor_total_cents = Math.round(total * 100);

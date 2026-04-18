@@ -1,13 +1,10 @@
-import { IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class AddItemDto {
-  @ApiProperty({ example: 123 })
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
   @IsInt()
   id_estoque!: number;
-
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  @Min(1)
-  quantidade!: number;
 }

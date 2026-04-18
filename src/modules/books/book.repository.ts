@@ -55,7 +55,7 @@ export class BookRepository {
           select: {
             id_estoque: true,
             id_livro: true,
-            quantidade: true,
+            disponivel: true,
             preco: true,
             condicao: true,
           },
@@ -109,7 +109,7 @@ export class BookRepository {
           select: {
             id_estoque: true,
             id_livro: true,
-            quantidade: true,
+            disponivel: true,
             preco: true,
             condicao: true,
           },

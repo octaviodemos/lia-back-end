@@ -6,8 +6,7 @@ import { Prisma } from '@prisma/client';
 
 interface ICreateStockItem {
   id_livro: number;
-  quantidade: number;
-  preco: number;
+  preco: string;
   condicao?: string;
 }
 
@@ -18,9 +17,8 @@ export class StockService {
     private bookRepository: BookRepository,
   ) {}
 
-  async create({ id_livro, quantidade, preco, condicao }: ICreateStockItem) {
+  async create({ id_livro, preco, condicao }: ICreateStockItem) {
     if (id_livro == null || Number.isNaN(Number(id_livro))) {
-      // bad request: id_livro missing or invalid
       throw new BadRequestException('Parâmetro id_livro inválido ou ausente.');
     }
 
@@ -28,9 +26,8 @@ export class StockService {
     if (!book) {
       throw new NotFoundException('Livro não encontrado com o ID fornecido.');
     }
-    
+
     const stockItem = await this.stockRepository.create({
-      quantidade,
       preco,
       condicao,
       livro: {
@@ -40,10 +37,9 @@ export class StockService {
       },
     });
 
-    // Retorna o item criado com preço formatado
     return {
       ...stockItem,
-      preco: DecimalHelper.toString(stockItem.preco)
+      preco: DecimalHelper.toString(stockItem.preco),
     };
   }
 
@@ -56,8 +52,7 @@ export class StockService {
     const updatedItem = await this.stockRepository.update(id_estoque, data);
     return {
       ...updatedItem,
-      preco: DecimalHelper.toString(updatedItem.preco)
+      preco: DecimalHelper.toString(updatedItem.preco),
     };
   }
-
 }

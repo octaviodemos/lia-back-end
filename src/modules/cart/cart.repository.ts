@@ -22,20 +22,12 @@ export class CartRepository {
     });
   }
 
-  async addItem(id_carrinho: number, id_estoque: number, quantidade: number) {
+  async addItem(id_carrinho: number, id_estoque: number) {
     return this.prisma.carrinhoItem.create({
       data: {
         id_carrinho,
         id_estoque,
-        quantidade,
       },
-    });
-  }
-
-  async updateItemQuantity(id_carrinho_item: number, novaQuantidade: number) {
-    return this.prisma.carrinhoItem.update({
-      where: { id_carrinho_item },
-      data: { quantidade: novaQuantidade },
     });
   }
 
@@ -57,7 +49,7 @@ export class CartRepository {
       include: {
         itens: {
           include: {
-            estoque: { 
+            estoque: {
               include: {
                 livro: {
                   include: {

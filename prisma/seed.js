@@ -79,7 +79,6 @@ async function importBooks() {
               await prisma.estoque.create({
                 data: {
                   id_livro: existingBook.id_livro,
-                  quantidade: b.estoque.quantidade || 1,
                   preco: precoDecimal,
                   condicao: b.estoque.condicao || null,
                 },
@@ -141,7 +140,6 @@ async function importBooks() {
         await prisma.estoque.create({
           data: {
             id_livro: createdLivro.id_livro,
-            quantidade: b.estoque.quantidade || 1,
             preco: precoDecimal,
             condicao: b.estoque.condicao || null,
           },
