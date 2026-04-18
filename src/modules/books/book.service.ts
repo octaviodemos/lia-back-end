@@ -1,35 +1,44 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TipoImagem } from '@prisma/client';
 import { BookRepository } from './book.repository';
 import { DecimalHelper } from '@/shared/utils/decimal.helper';
+import { tipoImagemFromMulterFieldname } from '@/shared/utils/tipo-imagem-multer.util';
+import { CreateBookDto } from './dto/create-book.dto';
 
 @Injectable()
 export class BookService {
   constructor(private repository: BookRepository) {}
 
-  async create(data: any) {
-    console.log('[BookService] Dados recebidos:', JSON.stringify(data, null, 2));
-    
-    if (data.isbn) {
-      const bookExists = await this.repository.findByIsbn(data.isbn);
+  async create(dto: CreateBookDto, files?: Express.Multer.File[]) {
+    if (dto.isbn) {
+      const bookExists = await this.repository.findByIsbn(dto.isbn);
       if (bookExists) {
         throw new Error('Já existe um livro cadastrado com este ISBN.');
       }
     }
 
-    // Criar dados básicos do livro
+    const imagemCreates: { url_imagem: string; tipo_imagem: TipoImagem }[] = [];
+    for (const f of files || []) {
+      if (!/^image\//.test(f.mimetype)) continue;
+      const tipo = tipoImagemFromMulterFieldname(f.fieldname);
+      if (!tipo) continue;
+      imagemCreates.push({ url_imagem: `/uploads/books/${f.filename}`, tipo_imagem: tipo });
+    }
+
     const livroData: Prisma.LivroCreateInput = {
-      titulo: data.titulo,
-      sinopse: data.sinopse || null,
-      editora: data.editora || null,
-      ano_publicacao: data.ano_publicacao || null,
-      isbn: data.isbn || null,
-      capa_url: data.capa_url || null,
+      titulo: dto.titulo,
+      sinopse: dto.sinopse || null,
+      editora: dto.editora || null,
+      ano_publicacao: dto.ano_publicacao ?? null,
+      isbn: dto.isbn || null,
     };
 
-    console.log('[BookService] Dados formatados para Prisma:', JSON.stringify(livroData, null, 2));
+    if (imagemCreates.length) {
+      livroData.imagens = { create: imagemCreates };
+    }
 
-    return this.repository.create(livroData);
+    const created = await this.repository.create(livroData);
+    return this.mapLivroDetalhe(created as any);
   }
 
   async findAll() {
@@ -39,15 +48,19 @@ export class BookService {
       const estoqueArr = book.estoque || [];
       const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
 
-      const generos = (book.generos || []).map((lg: any) => {
-        if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
-        return null;
-      }).filter(Boolean);
+      const generos = (book.generos || [])
+        .map((lg: any) => {
+          if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
+          return null;
+        })
+        .filter(Boolean);
 
-      const autores = (book.autores || []).map((la: any) => {
-        if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
-        return null;
-      }).filter(Boolean);
+      const autores = (book.autores || [])
+        .map((la: any) => {
+          if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
+          return null;
+        })
+        .filter(Boolean);
 
       const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
 
@@ -58,7 +71,7 @@ export class BookService {
         editora: book.editora,
         ano_publicacao: book.ano_publicacao,
         isbn: book.isbn,
-        capa_url: book.capa_url,
+        imagens: this.mapImagensLivro(book.imagens),
         preco,
         id_estoque,
         generos,
@@ -72,39 +85,7 @@ export class BookService {
     if (!book) {
       throw new NotFoundException('Livro não encontrado.');
     }
-
-    const estoque = ((book as any).estoque || []).map((s: any) => ({
-      id_estoque: s.id_estoque,
-      id_livro: s.id_livro,
-      quantidade: s.quantidade,
-      preco: DecimalHelper.toString(s.preco),
-      condicao: s.condicao,
-    }));
-
-    const generos = ((book as any).generos || []).map((lg: any) => {
-      if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
-      return null;
-    }).filter(Boolean);
-
-    const autores = ((book as any).autores || []).map((la: any) => {
-      if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
-      return null;
-    }).filter(Boolean);
-
-    const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
-
-    return {
-      id_livro: book.id_livro,
-      titulo: book.titulo,
-      sinopse: book.sinopse,
-      editora: book.editora,
-      ano_publicacao: book.ano_publicacao,
-      isbn: book.isbn,
-      capa_url: book.capa_url,
-      estoque,
-      generos,
-      autores: autoresFinal,
-    };
+    return this.mapLivroDetalhe(book as any);
   }
 
   async getReviews(id_livro: number) {
@@ -125,7 +106,13 @@ export class BookService {
     return (reviews || []).map((r: any) => ({
       id_avaliacao: r.id_avaliacao,
       id_livro: r.id_livro,
-      livro: r.livro ? { id_livro: r.livro.id_livro, titulo: r.livro.titulo } : undefined,
+      livro: r.livro
+        ? {
+            id_livro: r.livro.id_livro,
+            titulo: r.livro.titulo,
+            imagens: this.mapImagensLivro(r.livro.imagens),
+          }
+        : undefined,
       id_usuario: r.id_usuario,
       nota: r.nota,
       comentario: r.comentario,
@@ -134,7 +121,7 @@ export class BookService {
     }));
   }
 
-  async approveReview(id_avaliacao: number) {
+  async approveReview(_id_avaliacao: number) {
     return { success: true };
   }
 
@@ -162,7 +149,52 @@ export class BookService {
     };
   }
 
+  private mapImagensLivro(imagens: any[] | undefined) {
+    return (imagens || []).map((img) => ({
+      id_imagem_livro: img.id_imagem_livro,
+      url_imagem: img.url_imagem,
+      tipo_imagem: img.tipo_imagem,
+    }));
+  }
 
+  private mapLivroDetalhe(book: any) {
+    const estoque = (book.estoque || []).map((s: any) => ({
+      id_estoque: s.id_estoque,
+      id_livro: s.id_livro,
+      quantidade: s.quantidade,
+      preco: DecimalHelper.toString(s.preco),
+      condicao: s.condicao,
+    }));
+
+    const generos = (book.generos || [])
+      .map((lg: any) => {
+        if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
+        return null;
+      })
+      .filter(Boolean);
+
+    const autores = (book.autores || [])
+      .map((la: any) => {
+        if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
+        return null;
+      })
+      .filter(Boolean);
+
+    const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
+
+    return {
+      id_livro: book.id_livro,
+      titulo: book.titulo,
+      sinopse: book.sinopse,
+      editora: book.editora,
+      ano_publicacao: book.ano_publicacao,
+      isbn: book.isbn,
+      imagens: this.mapImagensLivro(book.imagens),
+      estoque,
+      generos,
+      autores: autoresFinal,
+    };
+  }
 
   private findLowestPriceInfo(estoqueArr: any[]): { preco: string | null; id_estoque: number | null } {
     if (!Array.isArray(estoqueArr) || estoqueArr.length === 0) return { preco: null, id_estoque: null };
@@ -173,7 +205,7 @@ export class BookService {
     for (const s of estoqueArr) {
       const precoRaw = s && s.preco;
       const num = DecimalHelper.toNumber(precoRaw);
-      
+
       if (num > 0 && (min === null || num < min)) {
         min = num;
         minId = s.id_estoque ?? null;

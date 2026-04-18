@@ -1,5 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class LivroImagemDto {
+  @ApiProperty({ example: 1 })
+  id_imagem_livro!: number;
+
+  @ApiProperty({ example: '/uploads/books/abc.jpg' })
+  url_imagem!: string;
+
+  @ApiProperty({ example: 'Capa', enum: ['Capa', 'Contracapa', 'Lombada', 'Miolo/Páginas', 'Detalhes/Avarias'] })
+  tipo_imagem!: string;
+}
+
 export class BookDto {
   @ApiProperty({ example: 1 })
   id_livro!: number;
@@ -19,8 +30,8 @@ export class BookDto {
   @ApiProperty({ example: '978-xxx', required: false })
   isbn?: string;
 
-  @ApiProperty({ example: 'https://...', required: false })
-  capa_url?: string;
+  @ApiProperty({ type: () => [LivroImagemDto], required: false })
+  imagens?: LivroImagemDto[];
 
   @ApiProperty({ example: [{ id_genero: 1, nome: 'Ficção' }], required: false })
   generos?: { id_genero: number; nome: string }[];

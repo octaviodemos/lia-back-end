@@ -61,6 +61,7 @@ export class CartRepository {
               include: {
                 livro: {
                   include: {
+                    imagens: true,
                     autores: {
                       include: {
                         autor: true,

@@ -1,10 +1,23 @@
-import { Controller, Get, Post, Body, Param, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+  Req,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { BookService } from './book.service';
 import { CreateBookDto } from './dto/create-book.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { BookDto } from './dto/book.dto';
 import { BookDetailDto } from './dto/book-detail.dto';
 import { CreateAvaliacaoDto } from './dto/create-avaliacao.dto';
@@ -65,23 +78,37 @@ export class BookController {
     }
   }
 
-
-
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['titulo'],
+      properties: {
+        titulo: { type: 'string' },
+        sinopse: { type: 'string' },
+        editora: { type: 'string' },
+        ano_publicacao: { type: 'integer' },
+        isbn: { type: 'string' },
+        imagem_Capa: { type: 'string', format: 'binary' },
+        imagem_Contracapa: { type: 'string', format: 'binary' },
+        imagem_Lombada: { type: 'string', format: 'binary' },
+        imagem_MioloPaginas: { type: 'string', format: 'binary' },
+        imagem_DetalhesAvarias: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Create a new book (admin)' })
   @ApiResponse({ status: 201, description: 'Book created' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - requires admin role' })
-  async create(@Body() body: CreateBookDto) {
+  async create(@Body() body: CreateBookDto, @UploadedFiles() files: Express.Multer.File[]) {
     try {
-      console.log('[BookController] Dados recebidos:', JSON.stringify(body, null, 2));
-      return await this.service.create(body as any);
+      return await this.service.create(body, files || []);
     } catch (error: any) {
-      console.error('[ERROR] BookController.create', error);
-      console.error('[ERROR] Stack:', error.stack);
-      
       if (error?.code === 'P2002' || (error.message && error.message.includes('ISBN'))) {
         const msg = error.message || 'Conflito de dados (campo único).';
         throw new HttpException(msg, HttpStatus.CONFLICT);

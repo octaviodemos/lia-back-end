@@ -35,6 +35,10 @@ async function bootstrap() {
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   const repairsDir = path.resolve(uploadsDir, 'repairs');
   if (!fs.existsSync(repairsDir)) fs.mkdirSync(repairsDir, { recursive: true });
+  const booksDir = path.resolve(uploadsDir, 'books');
+  if (!fs.existsSync(booksDir)) fs.mkdirSync(booksDir, { recursive: true });
+  const offersDir = path.resolve(uploadsDir, 'offers');
+  if (!fs.existsSync(offersDir)) fs.mkdirSync(offersDir, { recursive: true });
   app.use('/uploads', express.static(uploadsDir));
 
   app.use(bodyParser.json());

@@ -72,7 +72,7 @@ function convertDecimals(obj: any): any {
 
 @Injectable()
 export class DecimalSerializerInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(_context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(map((data) => convertDecimals(data)));
   }
 }

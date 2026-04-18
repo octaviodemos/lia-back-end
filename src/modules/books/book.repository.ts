@@ -7,7 +7,10 @@ export class BookRepository {
   constructor(private prisma: PrismaService) {}
 
   async create(data: Prisma.LivroCreateInput) {
-    return this.prisma.livro.create({ data });
+    return this.prisma.livro.create({
+      data,
+      include: { imagens: true },
+    });
   }
 
   async findByIsbn(isbn: string) {
@@ -25,7 +28,7 @@ export class BookRepository {
         editora: true,
         ano_publicacao: true,
         isbn: true,
-        capa_url: true,
+        imagens: true,
         autores: {
           select: {
             autor: {
@@ -69,7 +72,7 @@ export class BookRepository {
         editora: true,
         ano_publicacao: true,
         isbn: true,
-        capa_url: true,
+        imagens: true,
         autores: {
           select: {
             autor: {
@@ -124,7 +127,10 @@ export class BookRepository {
   async findPendingReviews() {
     return this.prisma.avaliacao.findMany({
       orderBy: { data_avaliacao: 'desc' },
-      include: { usuario: { select: { id_usuario: true, nome: true } }, livro: { select: { id_livro: true, titulo: true } } },
+      include: {
+        usuario: { select: { id_usuario: true, nome: true } },
+        livro: { select: { id_livro: true, titulo: true, imagens: true } },
+      },
       take: 50,
     });
   }

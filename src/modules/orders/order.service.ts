@@ -89,6 +89,7 @@ export class OrderService {
           ? {
               id_livro: it.estoque.livro.id_livro ?? it.estoque.livro.id,
               titulo: it.estoque.livro.titulo,
+              imagens: it.estoque.livro.imagens ?? [],
             }
           : null;
 

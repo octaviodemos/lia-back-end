@@ -32,8 +32,9 @@ export class OrderRepository {
                   select: {
                     id_livro: true,
                     titulo: true,
-                  }
-                }
+                    imagens: true,
+                  },
+                },
               }
             }
           },
@@ -206,7 +207,11 @@ export class OrderRepository {
           include: {
             estoque: {
               include: {
-                livro: true,
+                livro: {
+                  include: {
+                    imagens: true,
+                  },
+                },
               },
             },
           },
@@ -247,7 +252,17 @@ export class OrderRepository {
       this.prisma.pedido.findMany({
         where,
         include: {
-          itens: { include: { estoque: { include: { livro: true } } } },
+          itens: {
+            include: {
+              estoque: {
+                include: {
+                  livro: {
+                    include: { imagens: true },
+                  },
+                },
+              },
+            },
+          },
           pagamento: true,
           cliente: { select: { id_usuario: true, nome: true, email: true } },
         },

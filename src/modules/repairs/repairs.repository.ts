@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateRepairDto } from './dto/create-repair.dto';
 import { RespondRepairDto } from './dto/respond-repair.dto';
+import { tipoImagemForRepairUpload } from '@/shared/utils/tipo-imagem-multer.util';
 
 @Injectable()
 export class RepairsRepository {
@@ -15,7 +16,10 @@ export class RepairsRepository {
 
     if (fotos && fotos.length) {
       data.fotos = {
-        create: fotos.map((f) => ({ url_foto: `/uploads/repairs/${f.filename}` })),
+        create: fotos.map((f) => ({
+          url_foto: `/uploads/repairs/${f.filename}`,
+          tipo_imagem: tipoImagemForRepairUpload(f.fieldname),
+        })),
       };
     }
 
@@ -33,6 +37,7 @@ export class RepairsRepository {
         descricao_problema: true,
         status_solicitacao: true,
         data_solicitacao: true,
+        fotos: true,
       },
       orderBy: { data_solicitacao: 'desc' },
     });
@@ -41,6 +46,7 @@ export class RepairsRepository {
   async getAllRequests() {
     return this.prisma.solicitacaoReforma.findMany({
       orderBy: { data_solicitacao: 'desc' },
+      include: { fotos: true },
     });
   }
 
@@ -75,6 +81,7 @@ export class RepairsRepository {
     return this.prisma.solicitacaoReforma.update({
       where: { id_solicitacao },
       data: dto,
+      include: { fotos: true },
     });
   }
 }

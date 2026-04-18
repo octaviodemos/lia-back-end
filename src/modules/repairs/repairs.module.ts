@@ -5,40 +5,15 @@ import { RepairsService } from './repairs.service';
 import { RepairsController } from './repairs.controller';
 import { AdminRepairsController } from './admin-repairs.controller';
 import { PrismaModule } from '@/prisma/prisma.module';
-import { diskStorage } from 'multer';
-import * as path from 'path';
-import { randomBytes } from 'crypto';
-
-function extFromMime(mime: string, originalName?: string) {
-  const map: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/jpg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
-  };
-  if (map[mime]) return map[mime];
-  if (originalName) return path.extname(originalName) || '';
-  return '';
-}
+import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer-image-disk';
 
 @Module({
   imports: [
     PrismaModule,
     MulterModule.register({
-      storage: diskStorage({
-        destination: './uploads/repairs',
-        filename: (req, file, cb) => {
-          const rnd = randomBytes(16).toString('hex');
-          const ext = extFromMime(file.mimetype, file.originalname);
-          cb(null, `${rnd}${ext}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (/^image\//.test(file.mimetype)) cb(null, true);
-        else cb(new Error('Only image files are allowed'), false);
-      },
-      limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+      storage: createImageDiskStorage('repairs'),
+      fileFilter: imageFileFilter,
+      limits: { fileSize: 5 * 1024 * 1024, files: 25 },
     }),
   ],
   providers: [RepairsRepository, RepairsService],

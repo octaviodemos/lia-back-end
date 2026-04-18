@@ -1,5 +1,6 @@
 import { IsString, IsNumber, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateOfferDto {
   @ApiProperty({ example: 'O Senhor dos Anéis' })
@@ -20,7 +21,8 @@ export class CreateOfferDto {
   @IsString()
   condicao_livro!: string;
 
-  @ApiProperty({ example: 45.90 })
+  @ApiProperty({ example: 45.9 })
+  @Type(() => Number)
   @IsNumber()
   preco_sugerido!: number;
 }

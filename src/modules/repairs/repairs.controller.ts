@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Param, UseGuards, Body, UseInterceptors, UploadedFiles } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -8,7 +8,6 @@ import { RepairsService } from './repairs.service';
 import { CreateRepairDto } from './dto/create-repair.dto';
 import { RespondRepairDto } from './dto/respond-repair.dto';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
-import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('repairs')
 @ApiTags('Repairs')
@@ -23,22 +22,28 @@ export class RepairsController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: ['descricao_problema'],
       properties: {
         descricao_problema: { type: 'string' },
         fotos: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
         },
+        imagem_Capa: { type: 'string', format: 'binary' },
+        imagem_Contracapa: { type: 'string', format: 'binary' },
+        imagem_Lombada: { type: 'string', format: 'binary' },
+        imagem_MioloPaginas: { type: 'string', format: 'binary' },
+        imagem_DetalhesAvarias: { type: 'string', format: 'binary' },
       },
     },
   })
-  @UseInterceptors(FilesInterceptor('fotos', 5))
+  @UseInterceptors(AnyFilesInterceptor())
   async createRequest(
     @CurrentUser('id') id_usuario: number,
-    @UploadedFiles() fotos: Express.Multer.File[],
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: CreateRepairDto,
   ) {
-    return this.service.createRequest(id_usuario, dto as any, fotos || []);
+    return this.service.createRequest(id_usuario, dto as any, files || []);
   }
 
   @Get('my-requests')

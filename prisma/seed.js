@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, TipoImagem } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
@@ -49,9 +49,27 @@ async function importBooks() {
           // If there's a new capa_url in JSON and it's different, update it
           try {
             const newCover = b.capa_url || null;
-            if (newCover && existingBook.capa_url !== newCover) {
-              await prisma.livro.update({ where: { isbn: b.isbn }, data: { capa_url: newCover } });
-              console.log(`Atualizada capa_url para ${b.titulo}`);
+            if (newCover) {
+              const capaImg = await prisma.imagemLivro.findFirst({
+                where: { id_livro: existingBook.id_livro, tipo_imagem: TipoImagem.Capa },
+              });
+              if (!capaImg || capaImg.url_imagem !== newCover) {
+                if (capaImg) {
+                  await prisma.imagemLivro.update({
+                    where: { id_imagem_livro: capaImg.id_imagem_livro },
+                    data: { url_imagem: newCover },
+                  });
+                } else {
+                  await prisma.imagemLivro.create({
+                    data: {
+                      id_livro: existingBook.id_livro,
+                      url_imagem: newCover,
+                      tipo_imagem: TipoImagem.Capa,
+                    },
+                  });
+                }
+                console.log(`Atualizada imagem Capa para ${b.titulo}`);
+              }
             }
 
             // ensure estoque exists for this livro; if none, create it
@@ -83,7 +101,11 @@ async function importBooks() {
           editora: b.editora || null,
           ano_publicacao: b.ano_publicacao || null,
           isbn: b.isbn || null,
-          capa_url: b.capa_url || null,
+          imagens: b.capa_url
+            ? {
+                create: [{ url_imagem: b.capa_url, tipo_imagem: TipoImagem.Capa }],
+              }
+            : undefined,
         },
       });
 

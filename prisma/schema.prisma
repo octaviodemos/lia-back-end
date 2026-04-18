@@ -11,6 +11,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TipoImagem {
+  Capa            @map("Capa")
+  Contracapa      @map("Contracapa")
+  Lombada         @map("Lombada")
+  MioloPaginas    @map("Miolo/Páginas")
+  DetalhesAvarias @map("Detalhes/Avarias")
+}
+
 // --- Grupo 1: Entidades Centrais ---
 
 model Usuario {
@@ -43,15 +51,25 @@ model Livro {
   editora        String?  @db.VarChar(255)
   ano_publicacao Int?
   isbn           String?  @unique @db.VarChar(20)
-  capa_url       String?  @db.VarChar(255)
 
-  // Relacionamentos
   estoque    Estoque[]
   autores    LivroAutor[]
   generos    LivroGenero[]
   avaliacoes Avaliacao[]
+  imagens    ImagemLivro[]
 
   @@map("livros")
+}
+
+model ImagemLivro {
+  id_imagem_livro Int        @id @default(autoincrement())
+  id_livro        Int
+  url_imagem      String     @db.VarChar(255)
+  tipo_imagem     TipoImagem
+
+  livro Livro @relation(fields: [id_livro], references: [id_livro], onDelete: Cascade)
+
+  @@map("imagem_livro")
 }
 
 model Autor {
@@ -190,9 +208,21 @@ model OfertaVenda {
   data_oferta     DateTime @default(now())
   resposta_admin  String?  @db.Text
 
-  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario])
+  usuario Usuario               @relation(fields: [id_usuario], references: [id_usuario])
+  imagens ImagemOfertaVenda[]
 
   @@map("ofertas_venda")
+}
+
+model ImagemOfertaVenda {
+  id_imagem_oferta_venda Int        @id @default(autoincrement())
+  id_oferta_venda        Int
+  url_imagem             String     @db.VarChar(255)
+  tipo_imagem            TipoImagem
+
+  oferta OfertaVenda @relation(fields: [id_oferta_venda], references: [id_oferta_venda], onDelete: Cascade)
+
+  @@map("imagem_oferta_venda")
 }
 
 model SolicitacaoReforma {
@@ -209,9 +239,10 @@ model SolicitacaoReforma {
 }
 
 model FotoSolicitacaoReforma {
-  id_foto        Int    @id @default(autoincrement())
+  id_foto        Int        @id @default(autoincrement())
   id_solicitacao Int
-  url_foto       String @db.VarChar(255)
+  url_foto       String     @db.VarChar(255)
+  tipo_imagem    TipoImagem @default(Capa)
 
   solicitacao SolicitacaoReforma @relation(fields: [id_solicitacao], references: [id_solicitacao])
 
