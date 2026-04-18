@@ -117,6 +117,7 @@ export class BookController {
         isbn: { type: 'string' },
         nota_conservacao: { type: 'integer', minimum: 1, maximum: 5 },
         descricao_conservacao: { type: 'string' },
+        destaque_vitrine: { type: 'boolean' },
         imagem_Capa: { type: 'string', format: 'binary' },
         imagem_Contracapa: { type: 'string', format: 'binary' },
         imagem_Lombada: { type: 'string', format: 'binary' },

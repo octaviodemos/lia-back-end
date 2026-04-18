@@ -36,6 +36,9 @@ export class BookDto {
   @ApiProperty({ example: 'Capa com leve desgaste', required: false })
   descricao_conservacao?: string;
 
+  @ApiProperty({ example: false, required: false })
+  destaque_vitrine?: boolean;
+
   @ApiProperty({ type: () => [LivroImagemDto], required: false })
   imagens?: LivroImagemDto[];
 

@@ -55,6 +55,7 @@ model Livro {
   isbn                     String?   @db.VarChar(20)
   nota_conservacao        Int      @default(5)
   descricao_conservacao  String?  @db.Text
+  destaque_vitrine        Boolean  @default(false)
 
   estoque    Estoque[]
   autores    LivroAutor[]

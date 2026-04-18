@@ -11,13 +11,6 @@ export class BookService {
   constructor(private repository: BookRepository) {}
 
   async create(dto: CreateBookDto, files?: Express.Multer.File[]) {
-    if (dto.isbn) {
-      const bookExists = await this.repository.findByIsbn(dto.isbn);
-      if (bookExists) {
-        throw new Error('Já existe um livro cadastrado com este ISBN.');
-      }
-    }
-
     const imagemCreates: { url_imagem: string; tipo_imagem: TipoImagem }[] = [];
     for (const f of files || []) {
       if (!/^image\//.test(f.mimetype)) continue;
@@ -34,6 +27,7 @@ export class BookService {
       isbn: dto.isbn || null,
       nota_conservacao: dto.nota_conservacao,
       descricao_conservacao: dto.descricao_conservacao ?? null,
+      destaque_vitrine: dto.destaque_vitrine === true,
     };
 
     if (imagemCreates.length) {
@@ -42,7 +36,12 @@ export class BookService {
 
     const created = await this.repository.create(livroData);
     const statsNew = await this.repository.aggregateApprovedRatingForEdition(created.id_livro);
-    return this.mapLivroDetalhe(created as any, statsNew);
+    const outrasC = await this.repository.findOutrasOpcoesMesmoIsbn(created.id_livro, (created as any).isbn);
+    return this.mapLivroDetalhe(
+      created as any,
+      statsNew,
+      (outrasC || []).map((o) => this.mapOutraOpcaoVitrine(o)),
+    );
   }
 
   async update(id_livro: number, dto: UpdateBookDto) {
@@ -61,62 +60,56 @@ export class BookService {
     if (dto.descricao_conservacao !== undefined) {
       data.descricao_conservacao = dto.descricao_conservacao || null;
     }
+    if (dto.destaque_vitrine !== undefined) {
+      data.destaque_vitrine = dto.destaque_vitrine;
+    }
 
     if (Object.keys(data).length === 0) {
       const statsOnly = await this.repository.aggregateApprovedRatingForEdition(id_livro);
-      return this.mapLivroDetalhe(existing as any, statsOnly);
+      const outrasE = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, existing.isbn);
+      return this.mapLivroDetalhe(
+        existing as any,
+        statsOnly,
+        (outrasE || []).map((o) => this.mapOutraOpcaoVitrine(o)),
+      );
     }
 
     const updated = await this.repository.update(id_livro, data);
     const stats = await this.repository.aggregateApprovedRatingForEdition(id_livro);
-    return this.mapLivroDetalhe(updated as any, stats);
+    const outrasU = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, (updated as any).isbn);
+    return this.mapLivroDetalhe(
+      updated as any,
+      stats,
+      (outrasU || []).map((o) => this.mapOutraOpcaoVitrine(o)),
+    );
   }
 
   async findAll() {
     const books = await this.repository.findAll();
-    const statsList = await Promise.all(
-      (books || []).map((b: any) => this.repository.aggregateApprovedRatingForEdition(b.id_livro)),
+    const comEstoque = (books || []).filter((b: any) =>
+      (b.estoque || []).some((s: any) => s.disponivel === true),
     );
-
-    return (books || []).map((book: any, i: number) => {
-      const estoqueArr = book.estoque || [];
-      const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
-      const stats = statsList[i] ?? { nota_media: null, total_avaliacoes: 0 };
-
-      const generos = (book.generos || [])
-        .map((lg: any) => {
-          if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
-          return null;
-        })
-        .filter(Boolean);
-
-      const autores = (book.autores || [])
-        .map((la: any) => {
-          if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
-          return null;
-        })
-        .filter(Boolean);
-
-      const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
-
-      return {
-        id_livro: book.id_livro,
-        titulo: book.titulo,
-        sinopse: book.sinopse,
-        editora: book.editora,
-        ano_publicacao: book.ano_publicacao,
-        isbn: book.isbn,
-        nota_conservacao: book.nota_conservacao,
-        descricao_conservacao: book.descricao_conservacao,
-        imagens: this.mapImagensLivro(book.imagens),
-        preco,
-        id_estoque,
-        generos,
-        autores: autoresFinal,
-        nota_media_avaliacoes: stats.nota_media,
-        total_avaliacoes: stats.total_avaliacoes,
-      };
-    });
+    const grupos = new Map<string, any[]>();
+    for (const b of comEstoque) {
+      const key = this.vitrineGrupoIsbn(b);
+      if (!grupos.has(key)) grupos.set(key, []);
+      grupos.get(key)!.push(b);
+    }
+    const vencedores: any[] = [];
+    for (const [, arr] of grupos) {
+      let best = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        best = this.compareVitrineRepresentative(best, arr[i]) > 0 ? arr[i] : best;
+      }
+      vencedores.push(best);
+    }
+    vencedores.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt', { sensitivity: 'base' }));
+    const statsList = await Promise.all(
+      vencedores.map((b) => this.repository.aggregateApprovedRatingForEdition(b.id_livro)),
+    );
+    return vencedores.map((book, i) =>
+      this.mapCatalogoLivro(book, statsList[i] ?? { nota_media: null, total_avaliacoes: 0 }),
+    );
   }
 
   async findById(id_livro: number) {
@@ -127,7 +120,9 @@ export class BookService {
     if (!book) {
       throw new NotFoundException('Livro não encontrado.');
     }
-    return this.mapLivroDetalhe(book as any, stats);
+    const outrasRaw = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, book.isbn);
+    const outras_opcoes = (outrasRaw || []).map((o) => this.mapOutraOpcaoVitrine(o));
+    return this.mapLivroDetalhe(book as any, stats, outras_opcoes);
   }
 
   async getReviews(id_livro: number) {
@@ -250,9 +245,98 @@ export class BookService {
     }));
   }
 
+  private mapCatalogoLivro(
+    book: any,
+    stats: { nota_media: number | null; total_avaliacoes: number },
+  ) {
+    const estoqueArr = book.estoque || [];
+    const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
+    const generos = (book.generos || [])
+      .map((lg: any) => {
+        if (lg && lg.genero) return { id_genero: lg.genero.id_genero, nome: lg.genero.nome };
+        return null;
+      })
+      .filter(Boolean);
+    const autores = (book.autores || [])
+      .map((la: any) => {
+        if (la && la.autor) return { id_autor: la.autor.id_autor, nome_completo: la.autor.nome_completo };
+        return null;
+      })
+      .filter(Boolean);
+    const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
+    return {
+      id_livro: book.id_livro,
+      titulo: book.titulo,
+      sinopse: book.sinopse,
+      editora: book.editora,
+      ano_publicacao: book.ano_publicacao,
+      isbn: book.isbn,
+      nota_conservacao: book.nota_conservacao,
+      descricao_conservacao: book.descricao_conservacao,
+      destaque_vitrine: !!book.destaque_vitrine,
+      imagens: this.mapImagensLivro(book.imagens),
+      preco,
+      id_estoque,
+      generos,
+      autores: autoresFinal,
+      nota_media_avaliacoes: stats.nota_media,
+      total_avaliacoes: stats.total_avaliacoes,
+    };
+  }
+
+  private mapOutraOpcaoVitrine(o: any) {
+    const est = o.estoque || [];
+    const { preco, id_estoque } = this.findLowestPriceInfo(est);
+    let condicao: string | null = null;
+    for (const s of est) {
+      if (s.id_estoque === id_estoque) {
+        condicao = s.condicao ?? null;
+        break;
+      }
+    }
+    return {
+      id_livro: o.id_livro,
+      nota_conservacao: o.nota_conservacao,
+      descricao_conservacao: o.descricao_conservacao ?? null,
+      imagens: this.mapImagensLivro(o.imagens),
+      preco,
+      id_estoque,
+      condicao,
+    };
+  }
+
+  private vitrineGrupoIsbn(book: any): string {
+    const raw = typeof book.isbn === 'string' ? book.isbn.trim() : '';
+    if (raw) return `isbn:${raw}`;
+    return `sem_isbn:${book.id_livro}`;
+  }
+
+  private precoMinimoVitrineNum(book: any): number {
+    const { preco } = this.findLowestPriceInfo(book.estoque || []);
+    if (preco == null) return Number.POSITIVE_INFINITY;
+    return DecimalHelper.toNumber(preco);
+  }
+
+  private compareVitrineRepresentative(a: any, b: any): number {
+    const da = !!a.destaque_vitrine;
+    const db = !!b.destaque_vitrine;
+    if (da !== db) {
+      if (db && !da) return 1;
+      if (da && !db) return -1;
+    }
+    if (b.nota_conservacao !== a.nota_conservacao) {
+      return b.nota_conservacao - a.nota_conservacao;
+    }
+    const pa = this.precoMinimoVitrineNum(a);
+    const pb = this.precoMinimoVitrineNum(b);
+    if (pa !== pb) return pa - pb;
+    return a.id_livro - b.id_livro;
+  }
+
   private mapLivroDetalhe(
     book: any,
     ratingStats?: { nota_media: number | null; total_avaliacoes: number },
+    outras_opcoes?: any[],
   ) {
     const estoque = (book.estoque || []).map((s: any) => ({
       id_estoque: s.id_estoque,
@@ -279,6 +363,7 @@ export class BookService {
     const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
 
     const stats = ratingStats ?? { nota_media: null, total_avaliacoes: 0 };
+    const outras = outras_opcoes ?? [];
 
     return {
       id_livro: book.id_livro,
@@ -289,12 +374,14 @@ export class BookService {
       isbn: book.isbn,
       nota_conservacao: book.nota_conservacao,
       descricao_conservacao: book.descricao_conservacao,
+      destaque_vitrine: !!book.destaque_vitrine,
       imagens: this.mapImagensLivro(book.imagens),
       estoque,
       generos,
       autores: autoresFinal,
       nota_media_avaliacoes: stats.nota_media,
       total_avaliacoes: stats.total_avaliacoes,
+      outras_opcoes: outras,
     };
   }
 

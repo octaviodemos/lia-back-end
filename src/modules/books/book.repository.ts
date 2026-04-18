@@ -14,8 +14,30 @@ export class BookRepository {
   }
 
   async findByIsbn(isbn: string) {
-    return this.prisma.livro.findUnique({
+    return this.prisma.livro.findFirst({
       where: { isbn },
+    });
+  }
+
+  async findOutrasOpcoesMesmoIsbn(id_livro_atual: number, isbn: string | null | undefined) {
+    const isbnNorm = isbn?.trim();
+    if (!isbnNorm) return [];
+    return this.prisma.livro.findMany({
+      where: {
+        isbn: isbnNorm,
+        id_livro: { not: id_livro_atual },
+        estoque: { some: { disponivel: true } },
+      },
+      select: {
+        id_livro: true,
+        nota_conservacao: true,
+        descricao_conservacao: true,
+        imagens: true,
+        estoque: {
+          where: { disponivel: true },
+          select: { id_estoque: true, preco: true, condicao: true, disponivel: true },
+        },
+      },
     });
   }
 
@@ -30,6 +52,7 @@ export class BookRepository {
         isbn: true,
         nota_conservacao: true,
         descricao_conservacao: true,
+        destaque_vitrine: true,
         imagens: true,
         autores: {
           select: {
@@ -84,6 +107,7 @@ export class BookRepository {
         isbn: true,
         nota_conservacao: true,
         descricao_conservacao: true,
+        destaque_vitrine: true,
         imagens: true,
         autores: {
           select: {

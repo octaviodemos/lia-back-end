@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsInt, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBookDto {
@@ -40,4 +40,10 @@ export class CreateBookDto {
   @IsOptional()
   @IsString()
   descricao_conservacao?: string;
+
+  @ApiProperty({ example: false, required: false })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  destaque_vitrine?: boolean;
 }
