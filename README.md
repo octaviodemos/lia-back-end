@@ -1,311 +1,174 @@
-# Projeto LIA - API Backend
+# LIA Backend
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+API REST do projeto LIA, construída com NestJS + Prisma + PostgreSQL.
 
-API RESTful desenvolvida para o Projeto LIA, um e‑commerce de livros com funcionalidades de loja pessoal e serviços de aquisição e reforma. NestJS — construída com Node.js, NestJS, TypeScript e Prisma, seguindo uma arquitetura modular e orientada a domínios.
+## Visão geral
 
----
+O sistema atende três frentes principais:
 
-## Tabela de Conteúdos
+- Loja/catálogo de livros.
+- Oferta de venda de livros para a LIA.
+- Solicitações de reforma.
 
-1.  [Funcionalidades Atuais](#funcionalidades-atuais)
-2.  [Tecnologias Utilizadas](#tecnologias-utilizadas)
-3.  [Pré-requisitos](#pré-requisitos)
-4.  [Como Rodar o Projeto](#como-rodar-o-projeto)
-5.  [Scripts Disponíveis](#scripts-disponíveis)
-6.  [Estrutura de Pastas](#estrutura-de-pastas)
-7.  [Endpoints da API](#endpoints-da-api)
-8.  [Licença](#licença)
+Regras centrais atuais do domínio:
 
----
+- Cada linha de `estoque` representa um exemplar único.
+- Vitrine agrupa por ISBN e escolhe um representante por prioridade.
+- Avaliações são agregadas por edição (ISBN) com fallback por título.
+- Upload de imagens é categorizado por tipo (Capa, Contracapa, Lombada, MioloPaginas, DetalhesAvarias).
 
-## Funcionalidades Atuais
+## Stack
 
--   **Autenticação & Usuários:**
-    -   Cadastro de usuários (`cliente` e `admin`).
-    -   Login com geração de token JWT.
-    -   Busca de perfil do usuário logado.
--   **Autorização:**
-    -   Middlewares para rotas protegidas (apenas autenticados).
-    -   Middlewares para rotas restritas (apenas administradores).
--   **Livros:**
-    -   Listagem e busca de livros (Público).
-    -   Criação, atualização e remoção de livros no catálogo (Admin).
--   **Estoque:**
-    -   Adição de livros do catálogo ao estoque com preço, quantidade e condição (Admin).
-    -   Atualização de itens do estoque (Admin).
--   **Carrinho de Compras:**
-    -   Adicionar itens do estoque ao carrinho (Cliente).
-    -   Visualizar o conteúdo completo do carrinho com cálculo de total (Cliente).
-
----
-
-## Tecnologias Utilizadas
-
-Esta API foi construída com um conjunto de ferramentas modernas e robustas. O checklist abaixo indica o status de cada componente no projeto.
-
--   [x] **Backend:**
-    -   [x] **Node.js:** Ambiente de execução JavaScript.
-    -   [x] **TypeScript:** Superset do JavaScript que adiciona tipagem estática.
-    -   [x] **NestJS:** Framework modular para Node.js que organiza controllers, providers e módulos.
-
--   [x] **Banco de Dados & ORM:**
-    -   [x] **PostgreSQL:** Banco de dados relacional.
-    -   [x] **Prisma:** ORM para modelagem, migrações e acesso aos dados.
-    -   [x] **pg:** Driver Node.js para conexão com o PostgreSQL.
-
--   [ ] **Autenticação & Segurança:**
-    -   [x] **Passport.js (`passport-jwt`):** Estratégia de autenticação configurada e funcionando.
-    -   [x] **JSON Web Token (`jsonwebtoken`):** Geração de tokens de acesso implementada.
-    -   [x] **bcryptjs:** Hashing de senhas implementado no cadastro de usuários.
-    -   [ ] **Helmet:** _(Instalado, mas ainda não configurado no `app.ts`)_ Adiciona cabeçalhos de segurança HTTP.
-    -   [ ] **CORS:** _(Instalado, mas ainda não configurado no `app.ts`)_ Middleware para habilitar o Cross-Origin Resource Sharing.
-
--   [x] **Validação de Dados:**
-    -   [x] **class-validator & class-transformer:** Validação e transformação com DTOs e ValidationPipe do Nest.
-
--   [x] **Qualidade de Código & Ferramentas de Desenvolvimento:**
-    -   [x] **ESLint:** Configurado para análise estática de código.
-    -   [x] **Prettier:** Configurado para formatação automática de código.
-    -   [x] **ts-node-dev:** Utilizado no script `dev` com hot-reload.
-    -   [x] **tsconfig-paths:** Configurado para resolver os "path aliases" (`@/`).
-
--   [ ] **Testes Automatizados:**
-    -   [ ] **Jest & Supertest:** Framework e bibliotecas de teste instalados e configurados.
-    -   [ ] **Testes de Unidade:** Cobertura de testes para as regras de negócio nos `services`.
-    -   [ ] **Testes de Integração:** Cobertura de testes para os `controllers` e `endpoints`.
-
--   [x] **Documentação da API:**
-    -   [x] **@nestjs/swagger:** Documentação automática gerada a partir de decorators (`@ApiProperty`, `@ApiTags`, etc).
-        -   [x] **Gerador de spec:** script `npm run generate:swagger` (CI-friendly) gera um snapshot OpenAPI versionável em `docs/openapi.json`.
-        -   [x] **Gerador de spec (dev):** `npm run generate:swagger:dev` executa o gerador direto do TypeScript para desenvolvimento rápido e também atualiza `docs/openapi.json`.
-
--   [ ] **Pagamentos:**
-    -   [x] **Mercado Pago SDK:** Biblioteca instalada.
-    -   [ ] **Implementação:** Lógica de criação de preferência de pagamento e webhooks.
-
--   [x] **Containerização:**
-    -   [x] **Docker:** Utilizado para criar e gerenciar o ambiente do banco de dados PostgreSQL.
+- Node.js + TypeScript
+- NestJS
+- Prisma ORM
+- PostgreSQL
+- JWT (autenticação)
+- Swagger/OpenAPI
+- Stripe (checkout/webhooks)
 
 ## Pré-requisitos
 
-Antes de começar, você precisa ter as seguintes ferramentas instaladas:
--   [Node.js](https://nodejs.org/en/) (v18 ou superior)
--   [Docker](https://www.docker.com/products/docker-desktop/) e Docker Compose
--   [Git](https://git-scm.com/)
+- Node.js 18+
+- PostgreSQL
+- npm
 
----
+## Configuração local
 
-## Como Rodar o Projeto
+1) Instale dependências:
 
-Siga os passos abaixo para executar a aplicação localmente:
-
-**1. Clone o repositório:**
-```bash
-git clone git@github.com:octaviodemos/lia-back-end.git
-cd lia-back-end
-```
-
-**2. Instale as dependências:**
 ```bash
 npm install
 ```
 
-**3. Configure as variáveis de ambiente:**
-Crie uma cópia do arquivo de exemplo `.env.example` e renomeie para `.env`.
-```bash
-cp .env.example .env
-```
-Em seguida, abra o arquivo `.env` e preencha as variáveis importantes:
-- `DATABASE_URL`: String de conexão com o PostgreSQL
-- `JWT_SECRET`: Chave secreta para assinar tokens JWT
-- `MERCADOPAGO_ACCESS_TOKEN`: Token de acesso do Mercado Pago
-  - Para **testes**: `TEST-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
-  - Para **produção**: `APP_USR-XXXX-XXXXXX-XXXX-XXXXXXXXX-XXXX`
-- `FRONTEND_URL` e `BACKEND_URL`: URLs do frontend e backend para configurar redirects
+2) Configure `.env` com as variáveis essenciais:
 
-**4. Inicie o banco de dados com Docker:**
-Este comando irá criar e iniciar um contêiner PostgreSQL em segundo plano.
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `PORT` (opcional)
+- `CORS_ORIGIN` (opcional)
+- `STRIPE_SECRET_KEY` (se usar pagamentos)
+- `STRIPE_WEBHOOK_SECRET` (se usar webhook assinado)
+- `BACKEND_URL` (para URLs de retorno do checkout)
+
+3) Aplique migrations:
+
 ```bash
-docker-compose up -d
+npx prisma migrate deploy
 ```
 
-**5. Aplique as migrações do banco de dados:**
-Este comando irá ler o `schema.prisma` e criar todas as tabelas no seu banco de dados.
+4) Gere o client do Prisma:
+
 ```bash
-npx prisma migrate dev
+npx prisma generate
 ```
 
-**6. Inicie a aplicação:**
+5) Rode em desenvolvimento:
+
 ```bash
 npm run dev
 ```
-O servidor estará rodando em `http://localhost:3333` (ou na porta que você definiu no seu `.env`).
 
-**Testando webhooks Stripe (local)**
+API: `http://localhost:3333`  
+Swagger: `http://localhost:3333/api/docs`
 
-Se você integrou o Stripe e quer testar webhooks localmente, siga um destes caminhos:
+## Scripts úteis
 
-- Usando o Stripe CLI (recomendado - simula assinatura corretamente):
+- `npm run dev` inicia com hot-reload.
+- `npm run build` compila TypeScript.
+- `npm run start` executa build em produção.
+- `npm run seed` popula dados iniciais.
+- `npm run lint` valida padrão de código.
+- `npm run lint:fix` corrige problemas auto-fixáveis.
+- `npm run generate:swagger` gera `docs/openapi.json`.
+- `npm run generate:swagger:dev` gera OpenAPI sem build completo.
 
-```bash
-# inicie a aplicação (em outro terminal)
-npm run dev
+## Estrutura resumida
 
-# no terminal novo, autentique e então escute e encaminhe eventos para seu endpoint
-stripe login
-stripe listen --forward-to http://localhost:3333/api/payments/webhook
-
-# o comando `stripe listen` exibirá um "Local webhook signing secret" (whsec_...)
-# exporte essa variável e sua chave de teste do Stripe no terminal onde roda o servidor:
-export STRIPE_WEBHOOK_SECRET=whsec_xxx
-export STRIPE_SECRET_KEY=sk_test_xxx
-
-# dispare um evento de teste (ex.: checkout.session.completed)
-stripe trigger checkout.session.completed
+```text
+src/
+  core/
+  modules/
+    auth/
+    books/
+    cart/
+    offers/
+    orders/
+    payments/
+    repairs/
+    stock/
+    users/
+  prisma/
+  shared/
+prisma/
+  migrations/
+  schema.prisma
 ```
 
-O endpoint real (com validação de assinatura) é `POST /api/payments/webhook`. O `Stripe CLI` envia o header `stripe-signature` e o payload raw — o projeto já está configurado para aceitar o corpo raw nessa rota.
+## Regras de negócio importantes
 
-- Método rápido sem assinatura (apenas dev):
+### Catálogo e vitrine
 
-Use o endpoint `POST /api/payments/webhook-dev` para simular o processamento do mesmo fluxo sem validação de assinatura — útil para testes rápidos locais.
+- A vitrine (`GET /api/books`) retorna um representante por ISBN.
+- Critério de escolha:
+  1. `destaque_vitrine = true`
+  2. maior `nota_conservacao`
+  3. menor preço disponível
+  4. menor `id_livro`
+- Livros sem ISBN não são agrupados entre si.
 
-```bash
-curl -X POST http://localhost:3333/api/payments/webhook-dev \
-    -H "Content-Type: application/json" \
-    -d '{"eventType":"checkout.session.completed","sessionId":"cs_test_XXXXXXXX"}'
-```
+### Detalhe do livro
 
-Nota: o `webhook-dev` deve ser usado apenas em ambiente de desenvolvimento (o código verifica `NODE_ENV`).
+- `GET /api/books/:id` retorna `outras_opcoes` com outros exemplares do mesmo ISBN disponíveis.
+- Cada opção inclui preço, condição, imagens e nota de conservação.
 
+### Avaliações
 
-**7. Acesse a documentação (Swagger):**
+- Avaliações continuam gravadas por `id_livro`.
+- Leitura e média agregam por edição:
+  - primeiro ISBN,
+  - fallback por título exato,
+  - fallback final por `id_livro`.
 
-Após iniciar a aplicação, a UI do Swagger fica disponível em:
+### Estoque/carrinho/pedido
 
-```
-http://localhost:3333/api/docs
-```
+- Não existe quantidade por item de estoque.
+- Exemplar está disponível ou indisponível (`disponivel`).
+- Carrinho é binário: item está ou não no carrinho.
+- Ao finalizar pedido, o exemplar é marcado como indisponível.
 
-Se quiser gerar um snapshot do OpenAPI para uso externo (por exemplo, publicar no Git ou em um gateway), rode:
+### Imagens categorizadas
 
-```bash
-npm run generate:swagger
-```
-O arquivo será escrito em `docs/openapi.json`.
-Você também pode gerar localmente sem compilar com:
+Campos esperados no multipart para upload:
 
-```bash
-npm run generate:swagger:dev
-```
-Esse comando executa o gerador diretamente do TypeScript (útil para desenvolvimento rápido).
+- `imagem_Capa`
+- `imagem_Contracapa`
+- `imagem_Lombada`
+- `imagem_MioloPaginas`
+- `imagem_DetalhesAvarias`
 
----
+As URLs ficam sob `/uploads/*` e são servidas estaticamente.
 
-## Scripts Disponíveis
+## Endpoints (resumo)
 
--   `npm run dev`: Inicia o servidor em modo de desenvolvimento com hot-reload.
--   `npm run build`: Compila o código TypeScript para JavaScript.
--   `npm run start`: Inicia o servidor a partir dos arquivos compilados (modo de produção).
- -   `npm run start`: Inicia o servidor a partir dos arquivos compilados (modo de produção).
- -   `npm test`: Roda os testes automatizados com Jest.
- -   `npm run lint`: Verifica o código em busca de erros de padrão com ESLint.
- -   `npm run generate:swagger`: Compila o projeto e executa o gerador (CI-friendly). Gera `docs/openapi.json`.
- -   `npm run generate:swagger:dev`: Executa o gerador direto do código TypeScript (sem build) — rápido para desenvolvimento. Gera `docs/openapi.json`.
+A referência oficial é o Swagger (`/api/docs`), mas os principais grupos são:
 
----
+- `/api/auth`
+- `/api/users`
+- `/api/books`
+- `/api/stock`
+- `/api/cart`
+- `/api/orders`
+- `/api/payments`
+- `/api/offers`
+- `/api/repairs`
+- `/api/admin/*`
 
-## Estrutura de Pastas
+## Observações
 
-O projeto utiliza uma arquitetura modular para separação de responsabilidades:
-```
-/src
-├── /@types         # Definições de tipos globais
-├── /config         # Configurações (ex: banco de dados)
-├── /core           # Lógicas centrais (middlewares, erros)
-├── /modules        # O coração da aplicação, cada pasta é um domínio
-│   ├── /auth
-│   ├── /books
-│   ├── /cart
-│   ├── /stock
-│   └── /users
-└── /shared         # Código compartilhado entre módulos
-```
-
----
-
-## Endpoints da API
-
-Aqui está uma lista dos principais endpoints disponíveis até o momento.
-
-#### Autenticação (`/api/auth`)
--   `POST /login`: Realiza o login e retorna um token JWT.
-
-#### Usuários (`/api/users`)
--   `POST /`: Cria um novo usuário (cliente ou admin).
--   `GET /me`: **(Protegida)** Retorna os dados do usuário logado.
-
-#### Livros (`/api/books`)
--   `GET /`: Retorna uma lista de todos os livros do catálogo.
--   `GET /:id`: Retorna os detalhes de um livro específico.
--   `POST /`: **(Admin)** Cadastra um novo livro.
-
-#### Estoque (`/api/stock`)
--   `POST /`: **(Admin)** Adiciona um livro ao estoque com preço e quantidade.
-        -   Observação: o campo `preco` é enviado e retornado como string no formato monetário com duas casas decimais (ex.: "49.90"). Isso preserva a precisão e evita problemas com ponto flutuante no cliente.
-        -   Exemplo de corpo para criação (JSON):
-
-                ```json
-                {
-                    "id_livro": 1,
-                    "quantidade": 10,
-                    "preco": "49.90",
-                    "condicao": "novo"
-                }
-                ```
--   `PUT /:id`: **(Admin)** Atualiza um item de estoque.
--   `PUT /:id`: **(Admin)** Atualiza um item de estoque. (Aceita `preco` como string no mesmo formato)
-
-#### Carrinho (`/api/cart`)
--   `GET /`: **(Protegida)** Retorna o conteúdo completo do carrinho do usuário.
--   `POST /items`: **(Protegida)** Adiciona um item de estoque ao carrinho.
-
-#### Pedidos (`/api/orders`)
--   `POST /confirm`: **(Protegida)** Confirma o pagamento e finaliza o pedido a partir do carrinho do usuário.
--   `POST /confirm-test`: **(Dev)** Endpoint de desenvolvimento para preencher carrinho e confirmar pedido diretamente.
--   `GET /my-orders`: **(Protegida)** Lista os pedidos do usuário logado.
-
-#### Pagamentos (`/api/payments`)
--   `POST /create`: **(Protegida)** Cria uma preferência de pagamento no Mercado Pago para processar a compra.
-        -   Corpo da requisição:
-                ```json
-                {
-                    "email": "usuario@email.com",
-                    "name": "Nome do Usuário",
-                    "cpf": "000.000.000-00",
-                    "items": [
-                        {
-                            "id": "book_1",
-                            "title": "Nome do Livro",
-                            "quantity": 1,
-                            "unit_price": 49.90,
-                            "description": "Descrição do livro"
-                        }
-                    ],
-                    "order_id": "pedido_123"
-                }
-                ```
-        -   Retorna: `init_point` (URL para checkout do Mercado Pago) e `sandbox_init_point` para testes.
--   `POST /webhook`: Webhook para receber notificações de status do Mercado Pago (não requer autenticação).
--   `GET /info/:paymentId`: **(Protegida)** Obtém informações detalhadas de um pagamento específico.
--   `GET /status/:orderId`: **(Protegida)** Verifica o status de pagamento de um pedido.
-
----
+- O arquivo `docs/openapi.json` pode ser versionado para integração com frontend/QA.
+- Se após mudança de schema aparecer erro de tipagem Prisma no editor, rode `npx prisma generate` e reinicie o TS Server.
 
 ## Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
----
-Feito com ❤️ por **Frank Cardoso**
+MIT.
