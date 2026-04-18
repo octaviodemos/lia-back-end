@@ -41,7 +41,8 @@ export class BookService {
     }
 
     const created = await this.repository.create(livroData);
-    return this.mapLivroDetalhe(created as any);
+    const statsNew = await this.repository.aggregateApprovedRatingForEdition(created.id_livro);
+    return this.mapLivroDetalhe(created as any, statsNew);
   }
 
   async update(id_livro: number, dto: UpdateBookDto) {
@@ -62,19 +63,25 @@ export class BookService {
     }
 
     if (Object.keys(data).length === 0) {
-      return this.mapLivroDetalhe(existing as any);
+      const statsOnly = await this.repository.aggregateApprovedRatingForEdition(id_livro);
+      return this.mapLivroDetalhe(existing as any, statsOnly);
     }
 
     const updated = await this.repository.update(id_livro, data);
-    return this.mapLivroDetalhe(updated as any);
+    const stats = await this.repository.aggregateApprovedRatingForEdition(id_livro);
+    return this.mapLivroDetalhe(updated as any, stats);
   }
 
   async findAll() {
     const books = await this.repository.findAll();
+    const statsList = await Promise.all(
+      (books || []).map((b: any) => this.repository.aggregateApprovedRatingForEdition(b.id_livro)),
+    );
 
-    return (books || []).map((book: any) => {
+    return (books || []).map((book: any, i: number) => {
       const estoqueArr = book.estoque || [];
       const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
+      const stats = statsList[i] ?? { nota_media: null, total_avaliacoes: 0 };
 
       const generos = (book.generos || [])
         .map((lg: any) => {
@@ -106,16 +113,21 @@ export class BookService {
         id_estoque,
         generos,
         autores: autoresFinal,
+        nota_media_avaliacoes: stats.nota_media,
+        total_avaliacoes: stats.total_avaliacoes,
       };
     });
   }
 
   async findById(id_livro: number) {
-    const book = await this.repository.findById(id_livro);
+    const [book, stats] = await Promise.all([
+      this.repository.findById(id_livro),
+      this.repository.aggregateApprovedRatingForEdition(id_livro),
+    ]);
     if (!book) {
       throw new NotFoundException('Livro não encontrado.');
     }
-    return this.mapLivroDetalhe(book as any);
+    return this.mapLivroDetalhe(book as any, stats);
   }
 
   async getReviews(id_livro: number) {
@@ -238,7 +250,10 @@ export class BookService {
     }));
   }
 
-  private mapLivroDetalhe(book: any) {
+  private mapLivroDetalhe(
+    book: any,
+    ratingStats?: { nota_media: number | null; total_avaliacoes: number },
+  ) {
     const estoque = (book.estoque || []).map((s: any) => ({
       id_estoque: s.id_estoque,
       id_livro: s.id_livro,
@@ -263,6 +278,8 @@ export class BookService {
 
     const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
 
+    const stats = ratingStats ?? { nota_media: null, total_avaliacoes: 0 };
+
     return {
       id_livro: book.id_livro,
       titulo: book.titulo,
@@ -276,6 +293,8 @@ export class BookService {
       estoque,
       generos,
       autores: autoresFinal,
+      nota_media_avaliacoes: stats.nota_media,
+      total_avaliacoes: stats.total_avaliacoes,
     };
   }
 

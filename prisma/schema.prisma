@@ -52,7 +52,7 @@ model Livro {
   sinopse                  String?  @db.Text
   editora                  String?  @db.VarChar(255)
   ano_publicacao           Int?
-  isbn                     String?  @unique @db.VarChar(20)
+  isbn                     String?   @db.VarChar(20)
   nota_conservacao        Int      @default(5)
   descricao_conservacao  String?  @db.Text
 

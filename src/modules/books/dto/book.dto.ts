@@ -50,4 +50,10 @@ export class BookDto {
 
   @ApiProperty({ example: 1, required: false })
   id_estoque?: number;
+
+  @ApiProperty({ example: 4.5, required: false, description: 'Média das avaliações aprovadas (mesmo ISBN ou mesmo título)' })
+  nota_media_avaliacoes?: number | null;
+
+  @ApiProperty({ example: 12, required: false })
+  total_avaliacoes?: number;
 }

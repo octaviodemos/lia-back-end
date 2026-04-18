@@ -118,9 +118,42 @@ export class BookRepository {
     });
   }
 
+  async buildWhereForApprovedReviewsForEdition(id_livro: number): Promise<Prisma.AvaliacaoWhereInput> {
+    const livro = await this.prisma.livro.findUnique({
+      where: { id_livro },
+      select: { id_livro: true, isbn: true, titulo: true },
+    });
+    if (!livro) {
+      return { id_livro: -1, aprovado: true };
+    }
+    const isbnNorm = livro.isbn?.trim() ?? '';
+    if (isbnNorm !== '') {
+      return { aprovado: true, livro: { is: { isbn: isbnNorm } } };
+    }
+    const tituloNorm = livro.titulo?.trim() ?? '';
+    if (tituloNorm !== '') {
+      return { aprovado: true, livro: { is: { titulo: tituloNorm } } };
+    }
+    return { aprovado: true, id_livro: livro.id_livro };
+  }
+
+  async aggregateApprovedRatingForEdition(id_livro: number): Promise<{ nota_media: number | null; total_avaliacoes: number }> {
+    const where = await this.buildWhereForApprovedReviewsForEdition(id_livro);
+    const agg = await this.prisma.avaliacao.aggregate({
+      where,
+      _avg: { nota: true },
+      _count: { _all: true },
+    });
+    const raw = agg._avg.nota;
+    const nota_media =
+      raw == null || Number.isNaN(Number(raw)) ? null : Math.round(Number(raw) * 10) / 10;
+    return { nota_media, total_avaliacoes: agg._count._all };
+  }
+
   async findReviewsByBook(id_livro: number) {
+    const where = await this.buildWhereForApprovedReviewsForEdition(id_livro);
     return this.prisma.avaliacao.findMany({
-      where: { id_livro, aprovado: true },
+      where,
       orderBy: { data_avaliacao: 'desc' },
       include: {
         usuario: { select: { id_usuario: true, nome: true } },
@@ -129,8 +162,9 @@ export class BookRepository {
   }
 
   async findApprovedReviewsWithReactions(id_livro: number, id_usuario?: number) {
+    const where = await this.buildWhereForApprovedReviewsForEdition(id_livro);
     const reviews = await this.prisma.avaliacao.findMany({
-      where: { id_livro, aprovado: true },
+      where,
       orderBy: { data_avaliacao: 'desc' },
       include: { usuario: { select: { id_usuario: true, nome: true } } },
     });
@@ -207,8 +241,9 @@ export class BookRepository {
   }
 
   async findApprovedReviewsByBook(id_livro: number) {
+    const where = await this.buildWhereForApprovedReviewsForEdition(id_livro);
     return this.prisma.avaliacao.findMany({
-      where: { id_livro, aprovado: true },
+      where,
       orderBy: { data_avaliacao: 'desc' },
       include: { usuario: { select: { id_usuario: true, nome: true } } },
     });
