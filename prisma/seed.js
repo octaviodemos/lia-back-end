@@ -43,7 +43,7 @@ async function importBooks() {
     try {
       // skip if book with same ISBN exists
       if (b.isbn) {
-        const existingBook = await prisma.livro.findUnique({ where: { isbn: b.isbn } });
+        const existingBook = await prisma.livro.findFirst({ where: { isbn: b.isbn } });
         if (existingBook) {
           console.log(`Livro já existe (isbn): ${b.titulo} - ${b.isbn}`);
           // If there's a new capa_url in JSON and it's different, update it
