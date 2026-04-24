@@ -8,23 +8,22 @@ async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'minhasenha';
 
-  const existing = await prisma.usuario.findUnique({ where: { email: adminEmail } });
-  if (existing) {
-    console.log('Admin already exists:', adminEmail);
-    return;
-  }
-
   const hashed = await bcrypt.hash(adminPassword, 10);
-  const created = await prisma.usuario.create({
-    data: {
-      nome: 'Admin Seed',
+  const result = await prisma.usuario.upsert({
+    where: { email: adminEmail },
+    create: {
+      nome: 'Administrador',
       email: adminEmail,
+      senha: hashed,
+      tipo_usuario: 'admin',
+    },
+    update: {
       senha: hashed,
       tipo_usuario: 'admin',
     },
   });
 
-  console.log('Created admin user:', created.email);
+  console.log('Admin pronto (criado ou atualizado):', result.email, result.tipo_usuario);
 }
 
 async function importBooks() {
@@ -43,7 +42,9 @@ async function importBooks() {
     try {
       // skip if book with same ISBN exists
       if (b.isbn) {
-        const existingBook = await prisma.livro.findUnique({ where: { isbn: b.isbn } });
+        const existingBook = b.isbn
+          ? await prisma.livro.findFirst({ where: { isbn: b.isbn } })
+          : null;
         if (existingBook) {
           console.log(`Livro já existe (isbn): ${b.titulo} - ${b.isbn}`);
           // If there's a new capa_url in JSON and it's different, update it
@@ -153,9 +154,392 @@ async function importBooks() {
   }
 }
 
+const LIVROS_CATALOGO = [
+  {
+    titulo: 'Dom Casmurro',
+    isbn: '9788572329583',
+    editora: 'Saraiva',
+    ano: 2012,
+    sinopse: 'Bentinho e Capitu no Rio de Janeiro oitocentista — um clássico de Machado de Assis.',
+    autores: ['Machado de Assis'],
+    generos: ['Romance', 'Literatura Brasileira'],
+    nota: 5,
+    destaque: true,
+    preco: '32.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9788572329583-M.jpg',
+  },
+  {
+    titulo: 'Grande sertão: veredas',
+    isbn: '9788572326137',
+    editora: 'Nova Fronteira',
+    ano: 2010,
+    sinopse: 'A saga de Riobaldo e Diadorim no sertão mineiro, obra-prima de Guimarães Rosa.',
+    autores: ['João Guimarães Rosa'],
+    generos: ['Romance', 'Regionalismo'],
+    nota: 4,
+    destaque: false,
+    preco: '45.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9788572326137-M.jpg',
+  },
+  {
+    titulo: 'Ficciones',
+    isbn: '9780060929756',
+    editora: 'Harper Perennial',
+    ano: 2000,
+    sinopse: 'Contos e labirintos: Tlön, Funes e outras invenções de Borges.',
+    autores: ['Jorge Luis Borges'],
+    generos: ['Contos', 'Ficção'],
+    nota: 5,
+    destaque: true,
+    preco: '58.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780060929756-M.jpg',
+  },
+  {
+    titulo: 'Duna',
+    isbn: '9780441172719',
+    editora: 'Ace Books',
+    ano: 2014,
+    sinopse: 'O planeta desértico Arrakis e a especiaria que move impérios.',
+    autores: ['Frank Herbert'],
+    generos: ['Ficção científica', 'Fantasia'],
+    nota: 4,
+    destaque: false,
+    preco: '64.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780441172719-M.jpg',
+  },
+  {
+    titulo: 'Cem anos de solidão',
+    isbn: '9781400034710',
+    editora: 'Everyman',
+    ano: 2002,
+    sinopse: 'A família Buendía e Macondo, narrativa fundamental de García Márquez.',
+    autores: ['Gabriel García Márquez'],
+    generos: ['Realismo fantástico', 'Romance'],
+    nota: 5,
+    destaque: false,
+    preco: '39.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9781400034710-M.jpg',
+  },
+  {
+    titulo: 'O processo',
+    isbn: '9780805209990',
+    editora: 'Schocken',
+    ano: 1998,
+    sinopse: 'Josef K. e a maquinaria da justiça em Kafka.',
+    autores: ['Franz Kafka'],
+    generos: ['Ficção', 'Clássico'],
+    nota: 3,
+    destaque: false,
+    preco: '28.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780805209990-M.jpg',
+  },
+  {
+    titulo: 'A metamorfose',
+    isbn: '9780553213690',
+    editora: 'Bantam',
+    ano: 2004,
+    sinopse: 'Gregor Samsa desperta transformado — a história do alienamento.',
+    autores: ['Franz Kafka'],
+    generos: ['Conto', 'Clássico'],
+    nota: 4,
+    destaque: false,
+    preco: '19.50',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780553213690-M.jpg',
+  },
+  {
+    titulo: 'Fahrenheit 451',
+    isbn: '9781451673319',
+    editora: 'Simon and Schuster',
+    ano: 2012,
+    sinopse: 'Os bombeiros queimam livros; uma distopia sobre o pensamento e a memória.',
+    autores: ['Ray Bradbury'],
+    generos: ['Ficção científica', 'Distopia'],
+    nota: 4,
+    destaque: false,
+    preco: '24.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9781451673319-M.jpg',
+  },
+  {
+    titulo: 'Morte na Mesopotâmia',
+    isbn: '9780062074746',
+    editora: 'Harper',
+    ano: 2010,
+    sinopse: 'Hercule Poirot e um enigma arqueológico e familiar.',
+    autores: ['Agatha Christie'],
+    generos: ['Policial', 'Mistério'],
+    nota: 3,
+    destaque: false,
+    preco: '36.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780062074746-M.jpg',
+  },
+  {
+    titulo: 'A cor que caiu do céu',
+    isbn: '9781840226238',
+    editora: 'Wordsworth',
+    ano: 2013,
+    sinopse: 'Cósmico horror: meteorito, vaca misteriosa e a decadência de Arkham.',
+    autores: ['H. P. Lovecraft'],
+    generos: ['Terror', 'Ficção científica'],
+    nota: 2,
+    destaque: false,
+    preco: '18.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9781840226238-M.jpg',
+  },
+  {
+    titulo: 'A arte da guerra',
+    isbn: '9788544000424',
+    editora: 'Clássicos',
+    ano: 2015,
+    sinopse: 'Estratégia, liderança e tática — texto milenar da China.',
+    autores: ['Sun Tzu'],
+    generos: ['Não-ficção', 'História'],
+    nota: 4,
+    destaque: false,
+    preco: '22.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9788544000424-M.jpg',
+  },
+  {
+    titulo: 'Sapiens',
+    isbn: '9780062316110',
+    editora: 'Harper',
+    ano: 2018,
+    sinopse: 'Breve história da humanidade: animais a deuses.',
+    autores: ['Yuval Noah Harari'],
+    generos: ['História', 'Antropologia'],
+    nota: 5,
+    destaque: true,
+    preco: '49.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780062316110-M.jpg',
+  },
+  {
+    titulo: 'A revolução dos bichos',
+    isbn: '9780141036137',
+    editora: 'Penguin',
+    ano: 2003,
+    sinopse: 'A fazenda onde os porcos lideram a revolta — alegoria política de Orwell.',
+    autores: ['George Orwell'],
+    generos: ['Sátira', 'Fábula'],
+    nota: 4,
+    destaque: false,
+    preco: '19.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780141036137-M.jpg',
+  },
+  {
+    titulo: 'O homem do castelo alto',
+    isbn: '9780241956196',
+    editora: 'Penguin',
+    ano: 2011,
+    sinopse: 'E se o Eixo tivesse vencido? Distopia e identidade em PKD.',
+    autores: ['Philip K. Dick'],
+    generos: ['Ficção científica', 'Distopia'],
+    nota: 3,
+    destaque: false,
+    preco: '27.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780241956196-M.jpg',
+  },
+  {
+    titulo: 'A culpa é das estrelas',
+    isbn: '9780141345659',
+    editora: 'Penguin',
+    ano: 2012,
+    sinopse: 'Hazel e Augustus, amor, perda e literatura.',
+    autores: ['John Green'],
+    generos: ['Jovem adulto', 'Romance'],
+    nota: 4,
+    destaque: false,
+    preco: '30.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780141345659-M.jpg',
+  },
+  {
+    titulo: 'A garota no trem',
+    isbn: '9781101990264',
+    editora: 'Riverhead',
+    ano: 2015,
+    sinopse: 'Thriller psicológico e rotina de trem suburbano.',
+    autores: ['Paula Hawkins'],
+    generos: ['Thriller', 'Mistério'],
+    nota: 3,
+    destaque: false,
+    preco: '29.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9781101990264-M.jpg',
+  },
+  {
+    titulo: 'A culpa do IBGE',
+    isbn: '9780000000001',
+    editora: 'Dados',
+    ano: 2020,
+    sinopse: 'Livro fictício de exemplo de seed: humor sobre estatísticas (placeholder).',
+    autores: ['Autor Fictício'],
+    generos: ['Humor', 'Não-ficção'],
+    nota: 1,
+    destaque: false,
+    preco: '9.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000001-M.jpg',
+  },
+  {
+    titulo: 'Cálculo 1: limites e derivadas',
+    isbn: '9780000000002',
+    editora: 'Edu',
+    ano: 2018,
+    sinopse: 'Livro didático de exemplo: introdução a limites, continuidade e derivada.',
+    autores: ['Prof. Exemplar', 'Mentora Técnica'],
+    generos: ['Educação', 'Matemática'],
+    nota: 4,
+    destaque: false,
+    preco: '99.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000002-M.jpg',
+  },
+  {
+    titulo: 'Cozinha do sertão',
+    isbn: '9780000000003',
+    editora: 'Cultural',
+    ano: 2016,
+    sinopse: 'Receitas, histórias e ingredientes de uma região inventada de seed.',
+    autores: ['Cozinheiro Regional'],
+    generos: ['Gastronomia', 'Cultura'],
+    nota: 5,
+    destaque: false,
+    preco: '55.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000003-M.jpg',
+  },
+  {
+    titulo: 'A ordem e o jardim',
+    isbn: '9780000000004',
+    editora: 'Verde',
+    ano: 2014,
+    sinopse: 'Ficção botânica leve: um jardim, uma conspiração de camélias (seed).',
+    autores: ['B. Folha'],
+    generos: ['Contos', 'Ficção'],
+    nota: 2,
+    destaque: false,
+    preco: '11.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000004-M.jpg',
+  },
+  {
+    titulo: 'Cidades invisíveis reimaginadas',
+    isbn: '9780000000005',
+    editora: 'Orbital',
+    ano: 2021,
+    sinopse: 'Homenagem conceitual a cidades, mapas e viagens lícitas de seed.',
+    autores: ['C. Cidade'],
+    generos: ['Viagem', 'Ensaio'],
+    nota: 4,
+    destaque: false,
+    preco: '40.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000005-M.jpg',
+  },
+  {
+    titulo: 'Banco de Dados: modelagem',
+    isbn: '9780000000006',
+    editora: 'Tech',
+    ano: 2022,
+    sinopse: 'Normalização, MER e SQL — exemplar didático (seed, não reutilizar título comercial).',
+    autores: ['D. Dados'],
+    generos: ['Tecnologia', 'Educação'],
+    nota: 3,
+    destaque: true,
+    preco: '120.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000006-M.jpg',
+  },
+  {
+    titulo: 'Memórias de quem fica em casa',
+    isbn: '9780000000007',
+    editora: 'Diário',
+    ano: 2019,
+    sinopse: 'Crônicas pessoais inventadas, diversidade de vozes (dados de seed).',
+    autores: ['Ana Rotina', 'Beto Sábado'],
+    generos: ['Crônica', 'Contemporânea'],
+    nota: 3,
+    destaque: false,
+    preco: '16.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780000000007-M.jpg',
+  },
+];
+
+async function seedUsuariosClientes() {
+  const defPass = process.env.SEED_USER_PASSWORD || 'minhasenha';
+  const hashed = await bcrypt.hash(defPass, 10);
+  const pessoas = [
+    { nome: 'Clara Menezes', email: 'clara@example.com', telefone: '(11) 98811-0001' },
+    { nome: 'Roberto Içara', email: 'roberto.icara@example.com', telefone: '(48) 99922-2002' },
+    { nome: 'Marina Sul', email: 'marina.sul@example.com', telefone: null },
+    { nome: 'Pedro Cartões', email: 'pedro.cart@example.com', telefone: '(21) 97733-3003' },
+  ];
+  for (const p of pessoas) {
+    const exist = await prisma.usuario.findUnique({ where: { email: p.email } });
+    if (exist) continue;
+    await prisma.usuario.create({
+      data: {
+        nome: p.nome,
+        email: p.email,
+        telefone: p.telefone,
+        senha: hashed,
+        tipo_usuario: 'cliente',
+      },
+    });
+    console.log('Usuário cliente de seed:', p.email);
+  }
+}
+
+async function seedLivrosCatalogo() {
+  for (const b of LIVROS_CATALOGO) {
+    try {
+      if (!b.isbn) continue;
+      const found = await prisma.livro.findFirst({ where: { isbn: b.isbn } });
+      if (found) {
+        continue;
+      }
+      const created = await prisma.livro.create({
+        data: {
+          titulo: b.titulo,
+          sinopse: b.sinopse,
+          editora: b.editora,
+          ano_publicacao: b.ano,
+          isbn: b.isbn,
+          nota_conservacao: b.nota,
+          descricao_conservacao: null,
+          destaque_vitrine: !!b.destaque,
+          imagens: b.capa
+            ? {
+                create: [{ url_imagem: b.capa, tipo_imagem: TipoImagem.Capa }],
+              }
+            : undefined,
+        },
+      });
+      for (const an of b.autores || []) {
+        let a = await prisma.autor.findFirst({ where: { nome_completo: an } });
+        if (!a) a = await prisma.autor.create({ data: { nome_completo: an } });
+        await prisma.livroAutor.create({
+          data: { id_livro: created.id_livro, id_autor: a.id_autor },
+        });
+      }
+      for (const g of b.generos || []) {
+        let gr = await prisma.genero.findUnique({ where: { nome: g } });
+        if (!gr) gr = await prisma.genero.create({ data: { nome: g } });
+        await prisma.livroGenero.create({
+          data: { id_livro: created.id_livro, id_genero: gr.id_genero },
+        });
+      }
+      await prisma.estoque.create({
+        data: {
+          id_livro: created.id_livro,
+          preco: b.preco,
+          condicao: null,
+          disponivel: true,
+        },
+      });
+      console.log('Catálogo seed: livro criado —', b.titulo);
+    } catch (e) {
+      console.error('Catálogo seed falhou', b.titulo, e.message || e);
+    }
+  }
+}
+
 async function runAll() {
   try {
     await main();
+    await seedUsuariosClientes();
+    await seedLivrosCatalogo();
     await importBooks();
   } catch (e) {
     console.error(e);

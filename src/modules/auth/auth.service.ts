@@ -34,6 +34,7 @@ export class AuthService {
         nome: dto.nome,
         email: dto.email,
         senha: hashed,
+        telefone: dto.telefone && String(dto.telefone).trim() ? String(dto.telefone).trim() : null,
         tipo_usuario: dto.tipo_usuario || 'cliente',
       },
     });
@@ -61,5 +62,31 @@ export class AuthService {
     }
     
     return user;
+  }
+
+  async updateProfile(
+    id_usuario: number,
+    data: { telefone?: string },
+  ) {
+    const update: { telefone?: string | null } = {};
+    if (data.telefone !== undefined) {
+      const t = String(data.telefone).trim();
+      update.telefone = t.length ? t : null;
+    }
+    if (Object.keys(update).length === 0) {
+      return this.getProfile(id_usuario);
+    }
+    return this.prisma.usuario.update({
+      where: { id_usuario },
+      data: update,
+      select: {
+        id_usuario: true,
+        nome: true,
+        email: true,
+        telefone: true,
+        tipo_usuario: true,
+        created_at: true,
+      },
+    });
   }
 }

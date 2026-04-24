@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsInt, Min, Max, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsInt, Min, Max, IsBoolean, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBookDto {
@@ -46,4 +46,10 @@ export class CreateBookDto {
   @Type(() => Boolean)
   @IsBoolean()
   destaque_vitrine?: boolean;
+
+  @ApiPropertyOptional({ example: '29.90', description: 'Preço do primeiro item no estoque (após criação do livro)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+(\.\d{1,2})?$/, { message: 'preco deve ser no formato 99.90' })
+  preco?: string;
 }

@@ -72,11 +72,37 @@ export class BookController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
+  @UseInterceptors(AnyFilesInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        titulo: { type: 'string' },
+        sinopse: { type: 'string' },
+        editora: { type: 'string' },
+        ano_publicacao: { type: 'integer' },
+        isbn: { type: 'string' },
+        nota_conservacao: { type: 'integer', minimum: 1, maximum: 5 },
+        descricao_conservacao: { type: 'string' },
+        destaque_vitrine: { type: 'boolean' },
+        imagem_Capa: { type: 'string', format: 'binary' },
+        imagem_Contracapa: { type: 'string', format: 'binary' },
+        imagem_Lombada: { type: 'string', format: 'binary' },
+        imagem_MioloPaginas: { type: 'string', format: 'binary' },
+        imagem_DetalhesAvarias: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Update book (admin)' })
   @ApiResponse({ status: 200, description: 'Book updated' })
-  async update(@Param('id') id: string, @Body() body: UpdateBookDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateBookDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
     try {
-      return await this.service.update(Number(id), body);
+      return await this.service.update(Number(id), body, files || []);
     } catch (error: any) {
       if (error instanceof HttpException) throw error;
       if (error?.code === 'P2002') {
@@ -118,6 +144,7 @@ export class BookController {
         nota_conservacao: { type: 'integer', minimum: 1, maximum: 5 },
         descricao_conservacao: { type: 'string' },
         destaque_vitrine: { type: 'boolean' },
+        preco: { type: 'string' },
         imagem_Capa: { type: 'string', format: 'binary' },
         imagem_Contracapa: { type: 'string', format: 'binary' },
         imagem_Lombada: { type: 'string', format: 'binary' },

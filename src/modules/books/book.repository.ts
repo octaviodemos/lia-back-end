@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TipoImagem } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
@@ -11,6 +11,28 @@ export class BookRepository {
       data,
       include: { imagens: true },
     });
+  }
+
+  async createEstoqueInicial(id_livro: number, preco: string) {
+    return this.prisma.estoque.create({
+      data: {
+        id_livro,
+        preco,
+        disponivel: true,
+        condicao: null,
+      },
+    });
+  }
+
+  async upsertImagemByTipo(id_livro: number, tipo_imagem: TipoImagem, url_imagem: string) {
+    const ex = await this.prisma.imagemLivro.findFirst({ where: { id_livro, tipo_imagem } });
+    if (ex) {
+      return this.prisma.imagemLivro.update({
+        where: { id_imagem_livro: ex.id_imagem_livro },
+        data: { url_imagem },
+      });
+    }
+    return this.prisma.imagemLivro.create({ data: { id_livro, tipo_imagem, url_imagem } });
   }
 
   async findByIsbn(isbn: string) {

@@ -1,8 +1,10 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsOptional, IsString, Matches, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateStockDto {
   @ApiProperty({ example: 1 })
+  @Type(() => Number)
   @IsInt()
   id_livro!: number;
 
@@ -11,7 +13,14 @@ export class CreateStockDto {
   @Matches(/^\d+(\.\d{1,2})?$/, { message: 'preco deve ser uma string numérica com até 2 casas decimais, ex: "49.90"' })
   preco!: string;
 
-  @ApiProperty({ example: 'novo', required: false })
+  @ApiProperty({ example: 5, description: 'Nota de conservação 1 a 5 (vinculada ao livro no catálogo)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  nota_conservacao!: number;
+
+  @ApiPropertyOptional({ example: 'novo' })
   @IsOptional()
   @IsString()
   condicao?: string;

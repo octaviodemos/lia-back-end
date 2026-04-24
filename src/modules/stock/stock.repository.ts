@@ -15,6 +15,36 @@ export class StockRepository {
     });
   }
 
+  async findByIdWithLivro(id_estoque: number) {
+    return this.prisma.estoque.findUnique({
+      where: { id_estoque },
+      include: {
+        livro: {
+          select: {
+            id_livro: true,
+            titulo: true,
+            nota_conservacao: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findAll() {
+    return this.prisma.estoque.findMany({
+      orderBy: { id_estoque: 'desc' },
+      include: {
+        livro: {
+          select: {
+            id_livro: true,
+            titulo: true,
+            nota_conservacao: true,
+          },
+        },
+      },
+    });
+  }
+
   /**
    * Encontra todos os itens de estoque para um livro específico.
    * Muito útil para a página de detalhes de um livro, para mostrar as diferentes

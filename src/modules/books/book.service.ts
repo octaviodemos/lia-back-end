@@ -35,16 +35,20 @@ export class BookService {
     }
 
     const created = await this.repository.create(livroData);
+    if (dto.preco) {
+      await this.repository.createEstoqueInicial(created.id_livro, dto.preco);
+    }
+    const createdWithRelations = (await this.repository.findById(created.id_livro)) as any;
     const statsNew = await this.repository.aggregateApprovedRatingForEdition(created.id_livro);
-    const outrasC = await this.repository.findOutrasOpcoesMesmoIsbn(created.id_livro, (created as any).isbn);
+    const outrasC = await this.repository.findOutrasOpcoesMesmoIsbn(created.id_livro, (createdWithRelations as any)?.isbn ?? (created as any).isbn);
     return this.mapLivroDetalhe(
-      created as any,
+      createdWithRelations || (created as any),
       statsNew,
       (outrasC || []).map((o) => this.mapOutraOpcaoVitrine(o)),
     );
   }
 
-  async update(id_livro: number, dto: UpdateBookDto) {
+  async update(id_livro: number, dto: UpdateBookDto, files?: Express.Multer.File[]) {
     const existing = await this.repository.findById(id_livro);
     if (!existing) {
       throw new NotFoundException('Livro não encontrado.');
@@ -64,9 +68,25 @@ export class BookService {
       data.destaque_vitrine = dto.destaque_vitrine;
     }
 
-    if (Object.keys(data).length === 0) {
+    if (Object.keys(data).length > 0) {
+      await this.repository.update(id_livro, data);
+    }
+
+    for (const f of files || []) {
+      if (!/^image\//.test(f.mimetype)) {
+        continue;
+      }
+      const tipo = tipoImagemFromMulterFieldname(f.fieldname);
+      if (!tipo) {
+        continue;
+      }
+      const url = `/uploads/books/${f.filename}`;
+      await this.repository.upsertImagemByTipo(id_livro, tipo, url);
+    }
+
+    if (Object.keys(data).length === 0 && (files || []).length === 0) {
       const statsOnly = await this.repository.aggregateApprovedRatingForEdition(id_livro);
-      const outrasE = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, existing.isbn);
+      const outrasE = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, (existing as any).isbn);
       return this.mapLivroDetalhe(
         existing as any,
         statsOnly,
@@ -74,11 +94,11 @@ export class BookService {
       );
     }
 
-    const updated = await this.repository.update(id_livro, data);
+    const refreshed = (await this.repository.findById(id_livro)) as any;
     const stats = await this.repository.aggregateApprovedRatingForEdition(id_livro);
-    const outrasU = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, (updated as any).isbn);
+    const outrasU = await this.repository.findOutrasOpcoesMesmoIsbn(id_livro, refreshed.isbn);
     return this.mapLivroDetalhe(
-      updated as any,
+      refreshed,
       stats,
       (outrasU || []).map((o) => this.mapOutraOpcaoVitrine(o)),
     );

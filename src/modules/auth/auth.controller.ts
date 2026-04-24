@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from '@/core/decorators/current-user.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -36,5 +37,13 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile data', type: () => import('./dto/profile.dto').then(m => m.ProfileDto) })
   async getProfile(@CurrentUser('id') id_usuario: number) {
     return this.authService.getProfile(id_usuario);
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Atualizar telefone (e demais campos permitidos) do perfil' })
+  async updateProfile(@CurrentUser('id') id_usuario: number, @Body() body: UpdateProfileDto) {
+    return this.authService.updateProfile(id_usuario, body);
   }
 }
