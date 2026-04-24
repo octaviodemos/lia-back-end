@@ -115,20 +115,22 @@ export class BookService {
       if (!grupos.has(key)) grupos.set(key, []);
       grupos.get(key)!.push(b);
     }
-    const vencedores: any[] = [];
+    const vencedoresComTamanho: { book: any; exemplaresMesmoIsbn: number }[] = [];
     for (const [, arr] of grupos) {
       let best = arr[0];
       for (let i = 1; i < arr.length; i++) {
         best = this.compareVitrineRepresentative(best, arr[i]) > 0 ? arr[i] : best;
       }
-      vencedores.push(best);
+      vencedoresComTamanho.push({ book: best, exemplaresMesmoIsbn: arr.length });
     }
-    vencedores.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'pt', { sensitivity: 'base' }));
-    const statsList = await Promise.all(
-      vencedores.map((b) => this.repository.aggregateApprovedRatingForEdition(b.id_livro)),
+    vencedoresComTamanho.sort((a, b) =>
+      (a.book.titulo || '').localeCompare(b.book.titulo || '', 'pt', { sensitivity: 'base' }),
     );
-    return vencedores.map((book, i) =>
-      this.mapCatalogoLivro(book, statsList[i] ?? { nota_media: null, total_avaliacoes: 0 }),
+    const statsList = await Promise.all(
+      vencedoresComTamanho.map(({ book }) => this.repository.aggregateApprovedRatingForEdition(book.id_livro)),
+    );
+    return vencedoresComTamanho.map(({ book, exemplaresMesmoIsbn }, i) =>
+      this.mapCatalogoLivro(book, statsList[i] ?? { nota_media: null, total_avaliacoes: 0 }, exemplaresMesmoIsbn),
     );
   }
 
@@ -268,6 +270,7 @@ export class BookService {
   private mapCatalogoLivro(
     book: any,
     stats: { nota_media: number | null; total_avaliacoes: number },
+    exemplaresMesmoIsbn: number,
   ) {
     const estoqueArr = book.estoque || [];
     const { preco, id_estoque } = this.findLowestPriceInfo(estoqueArr);
@@ -284,6 +287,8 @@ export class BookService {
       })
       .filter(Boolean);
     const autoresFinal = autores.length > 0 ? autores : [{ id_autor: null, nome_completo: 'Autor desconhecido' }];
+    const n = Number(exemplaresMesmoIsbn);
+    const exemplares_mesmo_isbn = Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
     return {
       id_livro: book.id_livro,
       titulo: book.titulo,
@@ -297,6 +302,7 @@ export class BookService {
       imagens: this.mapImagensLivro(book.imagens),
       preco,
       id_estoque,
+      exemplares_mesmo_isbn,
       generos,
       autores: autoresFinal,
       nota_media_avaliacoes: stats.nota_media,

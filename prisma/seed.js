@@ -4,6 +4,22 @@ require('dotenv').config();
 
 const prisma = new PrismaClient();
 
+function buildImagensCreateWithCapa(seedOffset, capaUrlPreferida) {
+  const base = 10 + (Math.abs(Number(seedOffset)) % 900) * 5;
+  const pick = (k) => Math.min(999, base + k);
+  const capa =
+    capaUrlPreferida && String(capaUrlPreferida).length > 0 && String(capaUrlPreferida).length <= 255
+      ? String(capaUrlPreferida)
+      : `https://picsum.photos/id/${pick(0)}/320/480`;
+  return [
+    { url_imagem: capa, tipo_imagem: TipoImagem.Capa },
+    { url_imagem: `https://picsum.photos/id/${pick(1)}/320/480`, tipo_imagem: TipoImagem.Contracapa },
+    { url_imagem: `https://picsum.photos/id/${pick(2)}/320/480`, tipo_imagem: TipoImagem.Lombada },
+    { url_imagem: `https://picsum.photos/id/${pick(3)}/320/480`, tipo_imagem: TipoImagem.MioloPaginas },
+    { url_imagem: `https://picsum.photos/id/${pick(4)}/320/480`, tipo_imagem: TipoImagem.DetalhesAvarias },
+  ];
+}
+
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'minhasenha';
@@ -38,13 +54,13 @@ async function importBooks() {
   const raw = fs.readFileSync(dataPath, 'utf8');
   const books = JSON.parse(raw);
 
-  for (const b of books) {
+  for (let bi = 0; bi < books.length; bi++) {
+    const b = books[bi];
     try {
-      // skip if book with same ISBN exists
       if (b.isbn) {
-        const existingBook = b.isbn
-          ? await prisma.livro.findFirst({ where: { isbn: b.isbn } })
-          : null;
+        const whereDup = { isbn: b.isbn };
+        if (b.titulo) whereDup.titulo = b.titulo;
+        const existingBook = await prisma.livro.findFirst({ where: whereDup });
         if (existingBook) {
           console.log(`Livro já existe (isbn): ${b.titulo} - ${b.isbn}`);
           // If there's a new capa_url in JSON and it's different, update it
@@ -93,7 +109,6 @@ async function importBooks() {
         }
       }
 
-      // create livro
       const createdLivro = await prisma.livro.create({
         data: {
           titulo: b.titulo,
@@ -103,11 +118,9 @@ async function importBooks() {
           isbn: b.isbn || null,
           nota_conservacao: 5,
           descricao_conservacao: null,
-          imagens: b.capa_url
-            ? {
-                create: [{ url_imagem: b.capa_url, tipo_imagem: TipoImagem.Capa }],
-              }
-            : undefined,
+          imagens: {
+            create: buildImagensCreateWithCapa(3000 + bi, b.capa_url || null),
+          },
         },
       });
 
@@ -456,6 +469,49 @@ const LIVROS_CATALOGO = [
   },
 ];
 
+const LIVROS_MESMO_ISBN = [
+  {
+    titulo: 'Manual da Vitrine LIA (Edição premium)',
+    isbn: '9789012345678',
+    editora: 'LIA Seed',
+    ano: 2025,
+    sinopse:
+      'Mesmo ISBN que os outros dois exemplares — este tem destaque na vitrine e deve ser o representante na listagem.',
+    autores: ['Curadoria LIA'],
+    generos: ['Demonstração'],
+    nota: 5,
+    destaque: true,
+    preco: '89.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9788572329583-M.jpg',
+  },
+  {
+    titulo: 'Manual da Vitrine LIA (Brochura)',
+    isbn: '9789012345678',
+    editora: 'LIA Seed',
+    ano: 2025,
+    sinopse: 'Mesmo ISBN: opção mais barata na ficha do livro em “outras opções”.',
+    autores: ['Curadoria LIA'],
+    generos: ['Demonstração'],
+    nota: 4,
+    destaque: false,
+    preco: '52.00',
+    capa: 'https://covers.openlibrary.org/b/isbn/9788572326137-M.jpg',
+  },
+  {
+    titulo: 'Manual da Vitrine LIA (Seminovo)',
+    isbn: '9789012345678',
+    editora: 'LIA Seed',
+    ano: 2025,
+    sinopse: 'Mesmo ISBN: terceiro exemplar para testar agrupamento por ISBN na loja.',
+    autores: ['Curadoria LIA'],
+    generos: ['Demonstração'],
+    nota: 4,
+    destaque: false,
+    preco: '34.90',
+    capa: 'https://covers.openlibrary.org/b/isbn/9780060929756-M.jpg',
+  },
+];
+
 async function seedUsuariosClientes() {
   const defPass = process.env.SEED_USER_PASSWORD || 'minhasenha';
   const hashed = await bcrypt.hash(defPass, 10);
@@ -481,56 +537,79 @@ async function seedUsuariosClientes() {
   }
 }
 
+async function criarLivroCatalogo(b, seedIdx) {
+  const created = await prisma.livro.create({
+    data: {
+      titulo: b.titulo,
+      sinopse: b.sinopse,
+      editora: b.editora,
+      ano_publicacao: b.ano,
+      isbn: b.isbn,
+      nota_conservacao: b.nota,
+      descricao_conservacao: null,
+      destaque_vitrine: !!b.destaque,
+      imagens: {
+        create: buildImagensCreateWithCapa(seedIdx, b.capa || null),
+      },
+    },
+  });
+  for (const an of b.autores || []) {
+    let a = await prisma.autor.findFirst({ where: { nome_completo: an } });
+    if (!a) a = await prisma.autor.create({ data: { nome_completo: an } });
+    await prisma.livroAutor.create({
+      data: { id_livro: created.id_livro, id_autor: a.id_autor },
+    });
+  }
+  for (const g of b.generos || []) {
+    let gr = await prisma.genero.findUnique({ where: { nome: g } });
+    if (!gr) gr = await prisma.genero.create({ data: { nome: g } });
+    await prisma.livroGenero.create({
+      data: { id_livro: created.id_livro, id_genero: gr.id_genero },
+    });
+  }
+  await prisma.estoque.create({
+    data: {
+      id_livro: created.id_livro,
+      preco: b.preco,
+      condicao: null,
+      disponivel: true,
+    },
+  });
+  return created;
+}
+
 async function seedLivrosCatalogo() {
+  let seedIdx = 0;
   for (const b of LIVROS_CATALOGO) {
     try {
       if (!b.isbn) continue;
-      const found = await prisma.livro.findFirst({ where: { isbn: b.isbn } });
-      if (found) {
-        continue;
-      }
-      const created = await prisma.livro.create({
-        data: {
-          titulo: b.titulo,
-          sinopse: b.sinopse,
-          editora: b.editora,
-          ano_publicacao: b.ano,
-          isbn: b.isbn,
-          nota_conservacao: b.nota,
-          descricao_conservacao: null,
-          destaque_vitrine: !!b.destaque,
-          imagens: b.capa
-            ? {
-                create: [{ url_imagem: b.capa, tipo_imagem: TipoImagem.Capa }],
-              }
-            : undefined,
-        },
+      const dup = await prisma.livro.findFirst({
+        where: { isbn: b.isbn, titulo: b.titulo },
       });
-      for (const an of b.autores || []) {
-        let a = await prisma.autor.findFirst({ where: { nome_completo: an } });
-        if (!a) a = await prisma.autor.create({ data: { nome_completo: an } });
-        await prisma.livroAutor.create({
-          data: { id_livro: created.id_livro, id_autor: a.id_autor },
-        });
-      }
-      for (const g of b.generos || []) {
-        let gr = await prisma.genero.findUnique({ where: { nome: g } });
-        if (!gr) gr = await prisma.genero.create({ data: { nome: g } });
-        await prisma.livroGenero.create({
-          data: { id_livro: created.id_livro, id_genero: gr.id_genero },
-        });
-      }
-      await prisma.estoque.create({
-        data: {
-          id_livro: created.id_livro,
-          preco: b.preco,
-          condicao: null,
-          disponivel: true,
-        },
-      });
+      if (dup) continue;
+      seedIdx += 1;
+      await criarLivroCatalogo(b, seedIdx);
       console.log('Catálogo seed: livro criado —', b.titulo);
     } catch (e) {
       console.error('Catálogo seed falhou', b.titulo, e.message || e);
+    }
+  }
+}
+
+async function seedLivrosMesmoIsbn() {
+  let seedIdx = 100;
+  for (const b of LIVROS_MESMO_ISBN) {
+    try {
+      if (!b.isbn) continue;
+      const dup = await prisma.livro.findFirst({
+        where: { isbn: b.isbn, titulo: b.titulo },
+      });
+      if (dup) continue;
+      seedIdx += 1;
+      await criarLivroCatalogo(b, seedIdx);
+      console.log('Seed mesmo ISBN: livro criado —', b.titulo);
+    } catch (e) {
+      console.error('Seed mesmo ISBN falhou', b.titulo, e.message || e);
     }
   }
 }
@@ -540,6 +619,7 @@ async function runAll() {
     await main();
     await seedUsuariosClientes();
     await seedLivrosCatalogo();
+    await seedLivrosMesmoIsbn();
     await importBooks();
   } catch (e) {
     console.error(e);
