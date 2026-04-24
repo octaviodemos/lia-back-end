@@ -20,6 +20,21 @@ function buildImagensCreateWithCapa(seedOffset, capaUrlPreferida) {
   ];
 }
 
+function variantesQuatroExemplares(precoReferencia) {
+  const base = parseFloat(String(precoReferencia).replace(',', '.'));
+  const b0 = Number.isFinite(base) && base > 0 ? base : 19.9;
+  const p = (delta) => {
+    const v = Math.round((b0 + delta) * 100) / 100;
+    return (v < 5 ? 5 : v).toFixed(2);
+  };
+  return [
+    { rotulo: 'A', nota: 5, destaque: true, preco: p(0) },
+    { rotulo: 'B', nota: 4, destaque: false, preco: p(-2) },
+    { rotulo: 'C', nota: 2, destaque: false, preco: p(-5) },
+    { rotulo: 'D', nota: 4, destaque: false, preco: p(-7) },
+  ];
+}
+
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'minhasenha';
@@ -469,49 +484,6 @@ const LIVROS_CATALOGO = [
   },
 ];
 
-const LIVROS_MESMO_ISBN = [
-  {
-    titulo: 'Manual da Vitrine LIA (Edição premium)',
-    isbn: '9789012345678',
-    editora: 'LIA Seed',
-    ano: 2025,
-    sinopse:
-      'Mesmo ISBN que os outros dois exemplares — este tem destaque na vitrine e deve ser o representante na listagem.',
-    autores: ['Curadoria LIA'],
-    generos: ['Demonstração'],
-    nota: 5,
-    destaque: true,
-    preco: '89.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9788572329583-M.jpg',
-  },
-  {
-    titulo: 'Manual da Vitrine LIA (Brochura)',
-    isbn: '9789012345678',
-    editora: 'LIA Seed',
-    ano: 2025,
-    sinopse: 'Mesmo ISBN: opção mais barata na ficha do livro em “outras opções”.',
-    autores: ['Curadoria LIA'],
-    generos: ['Demonstração'],
-    nota: 4,
-    destaque: false,
-    preco: '52.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9788572326137-M.jpg',
-  },
-  {
-    titulo: 'Manual da Vitrine LIA (Seminovo)',
-    isbn: '9789012345678',
-    editora: 'LIA Seed',
-    ano: 2025,
-    sinopse: 'Mesmo ISBN: terceiro exemplar para testar agrupamento por ISBN na loja.',
-    autores: ['Curadoria LIA'],
-    generos: ['Demonstração'],
-    nota: 4,
-    destaque: false,
-    preco: '34.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780060929756-M.jpg',
-  },
-];
-
 async function seedUsuariosClientes() {
   const defPass = process.env.SEED_USER_PASSWORD || 'minhasenha';
   const hashed = await bcrypt.hash(defPass, 10);
@@ -580,36 +552,29 @@ async function criarLivroCatalogo(b, seedIdx) {
 
 async function seedLivrosCatalogo() {
   let seedIdx = 0;
-  for (const b of LIVROS_CATALOGO) {
+  for (const grupo of LIVROS_CATALOGO) {
     try {
-      if (!b.isbn) continue;
-      const dup = await prisma.livro.findFirst({
-        where: { isbn: b.isbn, titulo: b.titulo },
-      });
-      if (dup) continue;
-      seedIdx += 1;
-      await criarLivroCatalogo(b, seedIdx);
-      console.log('Catálogo seed: livro criado —', b.titulo);
+      if (!grupo.isbn) continue;
+      const variantes = variantesQuatroExemplares(grupo.preco);
+      for (const ex of variantes) {
+        const titulo = `${grupo.titulo} (Acervo ${ex.rotulo})`;
+        const dup = await prisma.livro.findFirst({
+          where: { isbn: grupo.isbn, titulo },
+        });
+        if (dup) continue;
+        seedIdx += 1;
+        const b = {
+          ...grupo,
+          titulo,
+          nota: ex.nota,
+          destaque: ex.destaque,
+          preco: ex.preco,
+        };
+        await criarLivroCatalogo(b, seedIdx);
+        console.log('Catálogo seed: livro criado —', titulo);
+      }
     } catch (e) {
-      console.error('Catálogo seed falhou', b.titulo, e.message || e);
-    }
-  }
-}
-
-async function seedLivrosMesmoIsbn() {
-  let seedIdx = 100;
-  for (const b of LIVROS_MESMO_ISBN) {
-    try {
-      if (!b.isbn) continue;
-      const dup = await prisma.livro.findFirst({
-        where: { isbn: b.isbn, titulo: b.titulo },
-      });
-      if (dup) continue;
-      seedIdx += 1;
-      await criarLivroCatalogo(b, seedIdx);
-      console.log('Seed mesmo ISBN: livro criado —', b.titulo);
-    } catch (e) {
-      console.error('Seed mesmo ISBN falhou', b.titulo, e.message || e);
+      console.error('Catálogo seed falhou', grupo.titulo, e.message || e);
     }
   }
 }
@@ -619,7 +584,6 @@ async function runAll() {
     await main();
     await seedUsuariosClientes();
     await seedLivrosCatalogo();
-    await seedLivrosMesmoIsbn();
     await importBooks();
   } catch (e) {
     console.error(e);
