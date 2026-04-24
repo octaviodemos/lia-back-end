@@ -303,6 +303,7 @@ export class BookService {
       preco,
       id_estoque,
       exemplares_mesmo_isbn,
+      exemplaresMesmoIsbn: exemplares_mesmo_isbn,
       generos,
       autores: autoresFinal,
       nota_media_avaliacoes: stats.nota_media,

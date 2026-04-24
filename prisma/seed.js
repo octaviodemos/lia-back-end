@@ -28,10 +28,10 @@ function variantesQuatroExemplares(precoReferencia) {
     return (v < 5 ? 5 : v).toFixed(2);
   };
   return [
-    { rotulo: 'A', nota: 5, destaque: true, preco: p(0) },
-    { rotulo: 'B', nota: 4, destaque: false, preco: p(-2) },
-    { rotulo: 'C', nota: 2, destaque: false, preco: p(-5) },
-    { rotulo: 'D', nota: 4, destaque: false, preco: p(-7) },
+    { nota: 5, destaque: true, preco: p(0) },
+    { nota: 4, destaque: false, preco: p(-2) },
+    { nota: 2, destaque: false, preco: p(-5) },
+    { nota: 4, destaque: false, preco: p(-7) },
   ];
 }
 
@@ -557,9 +557,14 @@ async function seedLivrosCatalogo() {
       if (!grupo.isbn) continue;
       const variantes = variantesQuatroExemplares(grupo.preco);
       for (const ex of variantes) {
-        const titulo = `${grupo.titulo} (Acervo ${ex.rotulo})`;
+        const titulo = grupo.titulo;
         const dup = await prisma.livro.findFirst({
-          where: { isbn: grupo.isbn, titulo },
+          where: {
+            isbn: grupo.isbn,
+            titulo,
+            nota_conservacao: ex.nota,
+            estoque: { some: { preco: ex.preco } },
+          },
         });
         if (dup) continue;
         seedIdx += 1;
@@ -571,7 +576,7 @@ async function seedLivrosCatalogo() {
           preco: ex.preco,
         };
         await criarLivroCatalogo(b, seedIdx);
-        console.log('Catálogo seed: livro criado —', titulo);
+        console.log('Catálogo seed: livro criado —', titulo, String(ex.preco));
       }
     } catch (e) {
       console.error('Catálogo seed falhou', grupo.titulo, e.message || e);
