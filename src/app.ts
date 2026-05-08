@@ -15,6 +15,7 @@ import { RequestsModule } from './modules/requests/requests.module';
 import { UtilsModule } from './modules/utils/utils.module';
 import { PaymentModule } from './modules/payments/payment.module';
 import { PublicationsModule } from './modules/publications/publications.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { PublicationsModule } from './modules/publications/publications.module';
     RequestsModule,
     PublicationsModule,
     UtilsModule,
-    PaymentModule
+    PaymentModule,
+    AiModule,
   ],
 })
 export class AppModule {}

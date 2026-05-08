@@ -66,4 +66,11 @@ export class OffersRepository {
       include: { imagens: true },
     });
   }
+
+  async findByIdWithImagens(id_oferta_venda: number) {
+    return this.prisma.ofertaVenda.findUnique({
+      where: { id_oferta_venda },
+      include: { imagens: true },
+    });
+  }
 }

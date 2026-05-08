@@ -17,6 +17,6 @@ import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer
   ],
   providers: [OffersRepository, OffersService],
   controllers: [OffersController],
-  exports: [OffersService],
+  exports: [OffersService, OffersRepository],
 })
 export class OffersModule {}
