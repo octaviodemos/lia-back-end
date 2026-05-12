@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ReformEvaluationMock, ReviewModerationResult } from './ai.types';
 
 export type BookConditionEvaluation = {
   nota_conservacao: number;
@@ -113,5 +114,24 @@ export class AiService {
       t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
     }
     return t.trim();
+  }
+
+  recommendBooksMock(_bookshelf: unknown): number[] {
+    void _bookshelf;
+    return [1, 2, 3];
+  }
+
+  moderateReviewMock(texto: string): ReviewModerationResult {
+    void texto;
+    return { aprovado: true, motivo: 'Mock', tem_spoiler: false };
+  }
+
+  evaluateReformMock(_imagePaths: { path: string; type: string }[]): ReformEvaluationMock {
+    void _imagePaths;
+    return {
+      gravidade: 'Média',
+      orcamento_estimado: 45.0,
+      descricao: 'Danos na lombada detectados (Mock).',
+    };
   }
 }

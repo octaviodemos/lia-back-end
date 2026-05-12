@@ -16,6 +16,7 @@ import { UtilsModule } from './modules/utils/utils.module';
 import { PaymentModule } from './modules/payments/payment.module';
 import { PublicationsModule } from './modules/publications/publications.module';
 import { AiModule } from './modules/ai/ai.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AiModule } from './modules/ai/ai.module';
     UtilsModule,
     PaymentModule,
     AiModule,
+    RecommendationsModule,
   ],
 })
 export class AppModule {}

@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { OffersRepository } from '../offers/offers.repository';
+import { RepairsRepository } from '../repairs/repairs.repository';
 import { AiService } from './ai.service';
 import { TipoImagem } from '@prisma/client';
 
@@ -24,6 +25,7 @@ const ROTULO_TIPO_IMAGEM: Record<TipoImagem, string> = {
 export class AiController {
   constructor(
     private readonly offersRepository: OffersRepository,
+    private readonly repairsRepository: RepairsRepository,
     private readonly aiService: AiService,
   ) {}
 
@@ -55,5 +57,36 @@ export class AiController {
     });
 
     return this.aiService.evaluateBookCondition(imagePaths);
+  }
+
+  @Post('evaluate-reform/:id')
+  @ApiOperation({ summary: 'Avaliar solicitação de reforma (mock) a partir das fotos' })
+  async evaluateReform(@Param('id') id: string) {
+    const idSolicitacao = parseInt(id, 10);
+    if (Number.isNaN(idSolicitacao)) {
+      throw new BadRequestException('Identificador de solicitação inválido.');
+    }
+
+    const solicitacao = await this.repairsRepository.findByIdWithFotos(idSolicitacao);
+    if (!solicitacao) {
+      throw new NotFoundException('Solicitação de reforma não encontrada.');
+    }
+
+    const fotos = solicitacao.fotos || [];
+    if (!fotos.length) {
+      throw new BadRequestException('Esta solicitação não possui fotos para avaliação.');
+    }
+
+    const imagePaths = fotos.map((foto) => {
+      const raw = foto.url_foto || '';
+      const rel = raw.startsWith('/') ? raw.slice(1) : raw;
+      const absolutePath = path.resolve(process.cwd(), rel);
+      return {
+        path: absolutePath,
+        type: ROTULO_TIPO_IMAGEM[foto.tipo_imagem] ?? String(foto.tipo_imagem),
+      };
+    });
+
+    return this.aiService.evaluateReformMock(imagePaths);
   }
 }

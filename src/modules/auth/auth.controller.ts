@@ -44,6 +44,9 @@ export class AuthController {
   @ApiBearerAuth('JWT')
   @ApiOperation({ summary: 'Atualizar telefone (e demais campos permitidos) do perfil' })
   async updateProfile(@CurrentUser('id') id_usuario: number, @Body() body: UpdateProfileDto) {
-    return this.authService.updateProfile(id_usuario, body);
+    return this.authService.updateProfile(id_usuario, {
+      telefone: body.telefone,
+      skoob_user_id: body.skoob_user_id,
+    });
   }
 }

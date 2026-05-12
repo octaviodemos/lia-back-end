@@ -45,13 +45,14 @@ export class AuthService {
   }
 
   async getProfile(id_usuario: number) {
-    const user = await this.prisma.usuario.findUnique({
+    const user = await (this.prisma.usuario as any).findUnique({
       where: { id_usuario },
       select: {
         id_usuario: true,
         nome: true,
         email: true,
         telefone: true,
+        skoob_user_id: true,
         tipo_usuario: true,
         created_at: true,
       },
@@ -66,17 +67,21 @@ export class AuthService {
 
   async updateProfile(
     id_usuario: number,
-    data: { telefone?: string },
+    data: { telefone?: string; skoob_user_id?: string },
   ) {
-    const update: { telefone?: string | null } = {};
+    const update: { telefone?: string | null; skoob_user_id?: string | null } = {};
     if (data.telefone !== undefined) {
       const t = String(data.telefone).trim();
       update.telefone = t.length ? t : null;
     }
+    if (data.skoob_user_id !== undefined) {
+      const s = String(data.skoob_user_id).trim();
+      update.skoob_user_id = s.length ? s : null;
+    }
     if (Object.keys(update).length === 0) {
       return this.getProfile(id_usuario);
     }
-    return this.prisma.usuario.update({
+    return (this.prisma.usuario as any).update({
       where: { id_usuario },
       data: update,
       select: {
@@ -84,6 +89,7 @@ export class AuthService {
         nome: true,
         email: true,
         telefone: true,
+        skoob_user_id: true,
         tipo_usuario: true,
         created_at: true,
       },

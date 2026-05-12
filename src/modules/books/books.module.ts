@@ -6,9 +6,11 @@ import { BookController } from './book.controller';
 import { AdminReviewsController } from './admin-reviews.controller';
 import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer-image-disk';
 import { AvaliacaoReactionsController } from './reactions.controller';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
+    AiModule,
     MulterModule.register({
       storage: createImageDiskStorage('books'),
       fileFilter: imageFileFilter,

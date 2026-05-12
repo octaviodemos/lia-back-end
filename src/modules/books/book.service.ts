@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, TipoImagem } from '@prisma/client';
 import { BookRepository } from './book.repository';
 import { DecimalHelper } from '@/shared/utils/decimal.helper';
 import { tipoImagemFromMulterFieldname } from '@/shared/utils/tipo-imagem-multer.util';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class BookService {
-  constructor(private repository: BookRepository) {}
+  constructor(
+    private repository: BookRepository,
+    private readonly aiService: AiService,
+  ) {}
 
   async create(dto: CreateBookDto, files?: Express.Multer.File[]) {
     const imagemCreates: { url_imagem: string; tipo_imagem: TipoImagem }[] = [];
@@ -242,6 +246,12 @@ export class BookService {
   async createReview(id_livro: number, id_usuario: number, dto: { nota: number; comentario?: string }) {
     const livro = await this.repository.findById(id_livro);
     if (!livro) throw new NotFoundException('Livro não encontrado.');
+
+    const textoModeracao = [dto.comentario, dto.nota != null ? `nota ${dto.nota}` : ''].filter(Boolean).join('\n');
+    const mod = this.aiService.moderateReviewMock(textoModeracao);
+    if (!mod.aprovado) {
+      throw new BadRequestException(mod.motivo || 'Resenha não aprovada pela moderação.');
+    }
 
     const created = await this.repository.createReviewForBook(id_livro, id_usuario, {
       nota: dto.nota,

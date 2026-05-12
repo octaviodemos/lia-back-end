@@ -84,4 +84,11 @@ export class RepairsRepository {
       include: { fotos: true },
     });
   }
+
+  async findByIdWithFotos(id_solicitacao: number) {
+    return this.prisma.solicitacaoReforma.findUnique({
+      where: { id_solicitacao },
+      include: { fotos: true },
+    });
+  }
 }

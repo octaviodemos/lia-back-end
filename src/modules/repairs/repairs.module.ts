@@ -18,6 +18,6 @@ import { createImageDiskStorage, imageFileFilter } from '@/shared/storage/multer
   ],
   providers: [RepairsRepository, RepairsService],
   controllers: [RepairsController, AdminRepairsController],
-  exports: [RepairsService],
+  exports: [RepairsService, RepairsRepository],
 })
 export class RepairsModule {}

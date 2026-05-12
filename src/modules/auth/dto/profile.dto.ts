@@ -16,6 +16,9 @@ export class ProfileDto {
   @ApiProperty({ example: 'cliente', description: 'Tipo do usuário: cliente ou admin' })
   tipo_usuario!: string;
 
+  @ApiProperty({ example: '12345678', required: false, description: 'ID Skoob para recomendações' })
+  skoob_user_id?: string | null;
+
   @ApiProperty()
   created_at!: Date;
 }

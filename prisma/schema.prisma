@@ -27,6 +27,7 @@ model Usuario {
   email        String   @unique @db.VarChar(255)
   senha        String   @db.VarChar(255)
   telefone     String?  @db.VarChar(20)
+  skoob_user_id String? @db.VarChar(128)
   tipo_usuario String   @db.VarChar(50) // 'cliente', 'admin'
   created_at   DateTime @default(now())
 
