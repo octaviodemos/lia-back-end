@@ -248,7 +248,7 @@ export class BookService {
     if (!livro) throw new NotFoundException('Livro não encontrado.');
 
     const textoModeracao = [dto.comentario, dto.nota != null ? `nota ${dto.nota}` : ''].filter(Boolean).join('\n');
-    const mod = this.aiService.moderateReviewMock(textoModeracao);
+    const mod = await this.aiService.moderateReview(textoModeracao);
     if (!mod.aprovado) {
       throw new BadRequestException(mod.motivo || 'Resenha não aprovada pela moderação.');
     }

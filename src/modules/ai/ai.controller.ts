@@ -87,6 +87,6 @@ export class AiController {
       };
     });
 
-    return this.aiService.evaluateReformMock(imagePaths);
+    return this.aiService.evaluateReform(imagePaths);
   }
 }
