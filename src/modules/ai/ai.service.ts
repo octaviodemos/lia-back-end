@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type {
   CatalogItemForRecommendation,
+  CoverIdentificationResult,
   ReformEvaluationResult,
   ReviewModerationResult,
 } from './ai.types';
@@ -178,6 +179,55 @@ export class AiService {
     }
   }
 
+  async identifyBookFromCover(file: { buffer: Buffer; mimeType: string }): Promise<CoverIdentificationResult> {
+    const fallback: CoverIdentificationResult = {
+      titulo: '',
+      autor: '',
+      isbn: null,
+      confianca: 'baixa',
+    };
+    const apiKey = this.config.get<string>('GEMINI_API_KEY');
+    if (!apiKey?.trim() || !file.buffer?.length) {
+      return fallback;
+    }
+
+    const prompt =
+      'Analise a imagem da capa de um livro físico. Leia o título e o(s) autor(es) visíveis na capa.\n' +
+      'Retorne EXCLUSIVAMENTE um JSON com as chaves:\n' +
+      "- 'titulo' (string — título do livro; string vazia se ilegível).\n" +
+      "- 'autor' (string — autor(es); string vazia se ilegível).\n" +
+      "- 'isbn' (string com ISBN se visível na capa, ou null).\n" +
+      "- 'confianca' (string: 'alta', 'media' ou 'baixa' — confiança na leitura).";
+
+    const mimeType = file.mimeType?.startsWith('image/') ? file.mimeType : 'image/jpeg';
+    const parts: Part[] = [
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType,
+          data: file.buffer.toString('base64'),
+        },
+      },
+    ];
+
+    try {
+      const raw = await this.geminiGenerateContent(apiKey.trim(), parts);
+      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
+      const titulo = this.normalizarTextoCapa(parsed.titulo);
+      const autor = this.normalizarTextoCapa(parsed.autor);
+      const isbnRaw = parsed.isbn;
+      const isbn =
+        isbnRaw === null || isbnRaw === undefined
+          ? null
+          : this.normalizarTextoCapa(isbnRaw) || null;
+      const confianca = this.normalizarConfiancaCapa(parsed.confianca);
+      return { titulo, autor, isbn, confianca };
+    } catch (err) {
+      this.logger.warn(`Falha na leitura de capa Gemini: ${err instanceof Error ? err.message : String(err)}`);
+      return fallback;
+    }
+  }
+
   async recommendBooks(bookshelf: unknown, catalog: CatalogItemForRecommendation[]): Promise<number[]> {
     const catalogIds = new Set((catalog || []).map((c) => c.id));
     if (!catalogIds.size) {
@@ -221,6 +271,20 @@ export class AiService {
       this.logger.warn(`Falha nas recomendações Gemini: ${err instanceof Error ? err.message : String(err)}`);
       return [];
     }
+  }
+
+  private normalizarTextoCapa(valor: unknown): string {
+    if (valor === null || valor === undefined) {
+      return '';
+    }
+    return String(valor).trim();
+  }
+
+  private normalizarConfiancaCapa(valor: unknown): CoverIdentificationResult['confianca'] {
+    const t = String(valor ?? '').trim().toLowerCase();
+    if (t.includes('alta')) return 'alta';
+    if (t.includes('media') || t.includes('média')) return 'media';
+    return 'baixa';
   }
 
   private safeJsonSnippet(value: unknown, maxLen: number): string {

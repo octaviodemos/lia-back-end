@@ -16,3 +16,10 @@ export type CatalogItemForRecommendation = {
   autor: string;
   genero: string;
 };
+
+export type CoverIdentificationResult = {
+  titulo: string;
+  autor: string;
+  isbn: string | null;
+  confianca: 'alta' | 'media' | 'baixa';
+};
