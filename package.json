@@ -22,7 +22,7 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@google/generative-ai": "0.24.1",
+    "@ai-sdk/google": "3.0.80",
     "@nestjs/axios": "4.0.1",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^4.0.2",
@@ -32,6 +32,7 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/swagger": "^7.4.2",
     "@prisma/client": "^6.16.3",
+    "ai": "6.0.193",
     "axios": "1.16.0",
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",

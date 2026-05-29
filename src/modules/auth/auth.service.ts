@@ -77,6 +77,9 @@ export class AuthService {
     if (data.skoob_user_id !== undefined) {
       const s = String(data.skoob_user_id).trim();
       update.skoob_user_id = s.length ? s : null;
+      await (this.prisma as any).recomendacaoSkoobCache?.deleteMany({
+        where: { id_usuario },
+      });
     }
     if (Object.keys(update).length === 0) {
       return this.getProfile(id_usuario);

@@ -320,7 +320,7 @@ export class BookRepository {
         ...(data as any),
         id_livro,
         id_usuario,
-        aprovado: false,
+        aprovado: (data as any).aprovado === true,
       },
       include: {
         usuario: { select: { id_usuario: true, nome: true } },

@@ -159,6 +159,7 @@ export class BookService {
       id_usuario: r.id_usuario,
       nota: r.nota,
       comentario: r.comentario,
+      tem_spoiler: !!r.tem_spoiler,
       data_avaliacao: r.data_avaliacao,
       usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
       likes: r.likes ?? 0,
@@ -175,6 +176,7 @@ export class BookService {
       id_usuario: r.id_usuario,
       nota: r.nota,
       comentario: r.comentario,
+      tem_spoiler: !!r.tem_spoiler,
       data_avaliacao: r.data_avaliacao,
       usuario: r.usuario ? { id_usuario: r.usuario.id_usuario, nome: r.usuario.nome } : undefined,
       likes: r.likes ?? 0,
@@ -247,8 +249,7 @@ export class BookService {
     const livro = await this.repository.findById(id_livro);
     if (!livro) throw new NotFoundException('Livro não encontrado.');
 
-    const textoModeracao = [dto.comentario, dto.nota != null ? `nota ${dto.nota}` : ''].filter(Boolean).join('\n');
-    const mod = await this.aiService.moderateReview(textoModeracao);
+    const mod = await this.aiService.moderateReview(dto.comentario || '', dto.nota);
     if (!mod.aprovado) {
       throw new BadRequestException(mod.motivo || 'Resenha não aprovada pela moderação.');
     }
@@ -256,6 +257,8 @@ export class BookService {
     const created = await this.repository.createReviewForBook(id_livro, id_usuario, {
       nota: dto.nota,
       comentario: dto.comentario || null,
+      aprovado: true,
+      tem_spoiler: mod.tem_spoiler,
     } as any);
 
     return {
@@ -264,7 +267,9 @@ export class BookService {
       id_usuario: created.id_usuario,
       nota: created.nota,
       comentario: created.comentario,
+      tem_spoiler: mod.tem_spoiler,
       data_avaliacao: created.data_avaliacao,
+      aprovado: true,
       usuario: created.usuario ? { id_usuario: created.usuario.id_usuario, nome: created.usuario.nome } : undefined,
     };
   }

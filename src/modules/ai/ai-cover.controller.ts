@@ -1,20 +1,17 @@
 import {
   Controller,
   Post,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 
 @ApiTags('AI')
 @Controller('ai')
-@ApiBearerAuth('JWT')
-@UseGuards(JwtAuthGuard)
 export class AiCoverController {
   constructor(private readonly aiService: AiService) {}
 
@@ -38,9 +35,15 @@ export class AiCoverController {
     if (!/^image\//.test(file.mimetype || '')) {
       throw new BadRequestException('O arquivo deve ser uma imagem.');
     }
-    return this.aiService.identifyBookFromCover({
+    const resultado = await this.aiService.identifyBookFromCover({
       buffer: file.buffer,
       mimeType: file.mimetype,
     });
+    if (!resultado.titulo?.trim() && !resultado.autor?.trim() && !resultado.isbn?.trim()) {
+      throw new ServiceUnavailableException(
+        'Não foi possível identificar título ou autor na capa. Tente outra foto ou preencha manualmente.',
+      );
+    }
+    return resultado;
   }
 }

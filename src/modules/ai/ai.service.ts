@@ -1,28 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateText, type LanguageModel } from 'ai';
 import * as fs from 'fs';
 import * as path from 'path';
+import { GEMINI_MODEL_ID, GEMINI_MODEL_VISION_ID, parseJsonFromModelText } from './gemini.util';
+import {
+  JSON_ONLY_SUFFIX,
+  buildBookConditionPrompt,
+  buildCoverIdentificationPrompt,
+  buildModerationPrompt,
+  buildRecommendationsPrompt,
+  buildReformPrompt,
+  type BookshelfItemPrompt,
+} from './ai.prompts';
 import type {
   CatalogItemForRecommendation,
   CoverIdentificationResult,
   ReformEvaluationResult,
   ReviewModerationResult,
 } from './ai.types';
+import { detectSpoilerHeuristic, extractSpoilerFlagFromModel } from './spoiler.util';
 
 export type BookConditionEvaluation = {
   nota_conservacao: number;
   descricao_conservacao: string;
 };
 
-const MODEL_ID = 'gemini-1.5-flash';
-
-const PROMPT_TEXTO =
-  'Você é um avaliador rigoroso de livros físicos de um sebo. Analise estas fotos (categorizadas como Capa, Contracapa, Lombada, Miolo e Avarias).\n' +
-  'Retorne EXCLUSIVAMENTE um objeto JSON válido com duas chaves:\n' +
-  "- 'nota_conservacao' (número inteiro de 1 a 5, onde 5 é estado de novo, e 1 é muito danificado/faltando páginas).\n" +
-  "- 'descricao_conservacao' (string detalhando os defeitos encontrados, ex: 'Lombada desgastada e páginas amareladas'. Se for nota 5, retorne 'Livro em perfeito estado').\n" +
-  'Não inclua markdown de formatação como ```json, retorne apenas o objeto puro.';
+type ImageInput = { buffer: Buffer; mimeType: string; label?: string };
 
 @Injectable()
 export class AiService {
@@ -36,44 +41,16 @@ export class AiService {
       descricao_conservacao: 'Avaliação automática indisponível no momento.',
     };
 
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim()) {
-      return fallback;
-    }
-
-    if (!imagePaths.length) {
-      return fallback;
-    }
-
-    const parts: Part[] = [{ text: PROMPT_TEXTO }];
-
-    for (const item of imagePaths) {
-      let absolutePath = item.path;
-      if (!path.isAbsolute(absolutePath)) {
-        absolutePath = path.resolve(process.cwd(), item.path.replace(/^\//, ''));
-      }
-      if (!fs.existsSync(absolutePath)) {
-        this.logger.warn(`Arquivo de imagem não encontrado: ${absolutePath}`);
-        continue;
-      }
-      const buffer = fs.readFileSync(absolutePath);
-      const mimeType = this.mimeTypeFromPath(absolutePath);
-      parts.push({ text: `Categoria da foto seguinte: ${item.type}` });
-      parts.push({
-        inlineData: {
-          mimeType,
-          data: buffer.toString('base64'),
-        },
-      });
-    }
-
-    const imagePartCount = parts.filter((p) => 'inlineData' in p && p.inlineData).length;
-    if (imagePartCount === 0) {
+    const images = this.loadImagesFromPaths(imagePaths);
+    if (!images.length) {
       return fallback;
     }
 
     try {
-      const raw = await this.geminiGenerateContent(apiKey.trim(), parts);
+      const raw = await this.generateWithImages(buildBookConditionPrompt() + JSON_ONLY_SUFFIX, images);
+      if (!raw) {
+        return fallback;
+      }
       return this.parseEvaluationJson(raw, fallback);
     } catch (err) {
       this.logger.warn(`Falha na avaliação Gemini: ${err instanceof Error ? err.message : String(err)}`);
@@ -81,23 +58,25 @@ export class AiService {
     }
   }
 
-  async moderateReview(texto: string): Promise<ReviewModerationResult> {
+  async moderateReview(comentario: string, nota?: number): Promise<ReviewModerationResult> {
     const fallback: ReviewModerationResult = { aprovado: true, motivo: null, tem_spoiler: false };
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim()) {
-      return fallback;
-    }
-    const prompt =
-      'Atue como um moderador de comunidade de livros. Analise a seguinte resenha: ' +
-      JSON.stringify(texto ?? '') +
-      '.\n' +
-      'Retorne EXCLUSIVAMENTE um JSON com as chaves:\n' +
-      "- 'aprovado' (boolean - false se contiver xingamentos, ódio ou spam. true caso contrário).\n" +
-      "- 'motivo' (string explicativa caso reprovado, ou null se aprovado).\n" +
-      "- 'tem_spoiler' (boolean - true se revelar partes cruciais do final da história).";
+
+    const texto = String(comentario ?? '').trim();
+    const notaResolvida = this.resolverNotaModeracao(texto, nota);
+    const comentarioLimpo = this.extrairComentarioModeracao(texto, notaResolvida);
+
+    const prompt = buildModerationPrompt(comentarioLimpo, notaResolvida) + JSON_ONLY_SUFFIX;
+    const heuristicaSpoiler = detectSpoilerHeuristic(comentarioLimpo);
+
     try {
-      const raw = await this.geminiGenerateContent(apiKey.trim(), [{ text: prompt }]);
-      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
+      const raw = await this.generateText(prompt, 0.1);
+      if (!raw) {
+        return { ...fallback, tem_spoiler: heuristicaSpoiler };
+      }
+      const parsed = parseJsonFromModelText<Record<string, unknown>>(raw);
+      if (!parsed) {
+        return { ...fallback, tem_spoiler: heuristicaSpoiler };
+      }
       const aprovado = parsed.aprovado === true;
       const motivoRaw = parsed.motivo;
       const motivo =
@@ -106,11 +85,11 @@ export class AiService {
           : typeof motivoRaw === 'string'
             ? motivoRaw
             : String(motivoRaw);
-      const tem_spoiler = parsed.tem_spoiler === true;
+      const tem_spoiler = extractSpoilerFlagFromModel(parsed) || heuristicaSpoiler;
       return { aprovado, motivo: aprovado ? null : motivo, tem_spoiler };
     } catch (err) {
       this.logger.warn(`Falha na moderação Gemini: ${err instanceof Error ? err.message : String(err)}`);
-      return fallback;
+      return { ...fallback, tem_spoiler: heuristicaSpoiler };
     }
   }
 
@@ -120,47 +99,21 @@ export class AiService {
       orcamento_estimado: 50,
       descricao: 'Não foi possível analisar automaticamente as imagens neste momento.',
     };
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim() || !imagePaths.length) {
-      return fallback;
-    }
 
-    const promptText =
-      'Atue como um especialista em restauração de livros antigos. Analise as fotos dos danos. Retorne EXCLUSIVAMENTE um JSON com as chaves:\n' +
-      "- 'gravidade' (string: 'Leve', 'Média', 'Grave', 'Irreparável').\n" +
-      "- 'orcamento_estimado' (number: valor em reais justo para o conserto, de 10 a 100).\n" +
-      "- 'descricao' (string: laudo técnico resumido dos danos identificados e o que precisa ser feito).";
-
-    const parts: Part[] = [{ text: promptText }];
-
-    for (const item of imagePaths) {
-      let absolutePath = item.path;
-      if (!path.isAbsolute(absolutePath)) {
-        absolutePath = path.resolve(process.cwd(), item.path.replace(/^\//, ''));
-      }
-      if (!fs.existsSync(absolutePath)) {
-        this.logger.warn(`Arquivo de imagem não encontrado: ${absolutePath}`);
-        continue;
-      }
-      const buffer = fs.readFileSync(absolutePath);
-      const mimeType = this.mimeTypeFromPath(absolutePath);
-      parts.push({ text: `Categoria da foto seguinte: ${item.type}` });
-      parts.push({
-        inlineData: {
-          mimeType,
-          data: buffer.toString('base64'),
-        },
-      });
-    }
-
-    const imagePartCount = parts.filter((p) => 'inlineData' in p && p.inlineData).length;
-    if (imagePartCount === 0) {
+    const images = this.loadImagesFromPaths(imagePaths);
+    if (!images.length) {
       return fallback;
     }
 
     try {
-      const raw = await this.geminiGenerateContent(apiKey.trim(), parts);
-      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
+      const raw = await this.generateWithImages(buildReformPrompt() + JSON_ONLY_SUFFIX, images);
+      if (!raw) {
+        return fallback;
+      }
+      const parsed = parseJsonFromModelText<Record<string, unknown>>(raw);
+      if (!parsed) {
+        return fallback;
+      }
       const gravidadeRaw = parsed.gravidade;
       const gravidade =
         typeof gravidadeRaw === 'string' && gravidadeRaw.trim().length > 0 ? gravidadeRaw.trim() : fallback.gravidade;
@@ -186,40 +139,31 @@ export class AiService {
       isbn: null,
       confianca: 'baixa',
     };
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim() || !file.buffer?.length) {
+
+    if (!file.buffer?.length) {
       return fallback;
     }
 
-    const prompt =
-      'Analise a imagem da capa de um livro físico. Leia o título e o(s) autor(es) visíveis na capa.\n' +
-      'Retorne EXCLUSIVAMENTE um JSON com as chaves:\n' +
-      "- 'titulo' (string — título do livro; string vazia se ilegível).\n" +
-      "- 'autor' (string — autor(es); string vazia se ilegível).\n" +
-      "- 'isbn' (string com ISBN se visível na capa, ou null).\n" +
-      "- 'confianca' (string: 'alta', 'media' ou 'baixa' — confiança na leitura).";
-
     const mimeType = file.mimeType?.startsWith('image/') ? file.mimeType : 'image/jpeg';
-    const parts: Part[] = [
-      { text: prompt },
-      {
-        inlineData: {
-          mimeType,
-          data: file.buffer.toString('base64'),
-        },
-      },
-    ];
 
     try {
-      const raw = await this.geminiGenerateContent(apiKey.trim(), parts);
-      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
-      const titulo = this.normalizarTextoCapa(parsed.titulo);
-      const autor = this.normalizarTextoCapa(parsed.autor);
-      const isbnRaw = parsed.isbn;
+      const raw = await this.generateWithImages(buildCoverIdentificationPrompt() + JSON_ONLY_SUFFIX, [
+        { buffer: file.buffer, mimeType },
+      ]);
+      if (!raw) {
+        return fallback;
+      }
+      const parsed = parseJsonFromModelText<Record<string, unknown>>(raw);
+      if (!parsed) {
+        return fallback;
+      }
+      const titulo = this.extrairCampoTextoCapa(parsed, ['titulo', 'title', 'nome', 'titulo_livro']);
+      const autor = this.extrairCampoTextoCapa(parsed, ['autor', 'author', 'autores', 'autor_livro']);
+      const isbnRaw = parsed.isbn ?? parsed.ISBN;
       const isbn =
         isbnRaw === null || isbnRaw === undefined
           ? null
-          : this.normalizarTextoCapa(isbnRaw) || null;
+          : this.extrairCampoTextoCapa({ v: isbnRaw }, ['v']) || null;
       const confianca = this.normalizarConfiancaCapa(parsed.confianca);
       return { titulo, autor, isbn, confianca };
     } catch (err) {
@@ -233,27 +177,21 @@ export class AiService {
     if (!catalogIds.size) {
       return [];
     }
-    const apiKey = this.config.get<string>('GEMINI_API_KEY');
-    if (!apiKey?.trim()) {
-      return [];
-    }
 
-    const bookshelfResumido = this.safeJsonSnippet(bookshelf, 14000);
-    const catalogResumido = this.safeJsonSnippet(catalog, 14000);
+    const estante = this.normalizarEstanteSkoob(bookshelf);
+    const catalogo = (catalog || []).filter((c) => c?.id != null && String(c.titulo || '').trim().length > 0);
 
-    const prompt =
-      'Atue como um livreiro experiente. O cliente tem a seguinte estante de livros lidos no Skoob: ' +
-      bookshelfResumido +
-      '.\n' +
-      'Nossa loja possui os seguintes livros disponíveis: ' +
-      catalogResumido +
-      '.\n' +
-      'Analise o gosto do cliente e escolha os 3 livros do nosso catálogo que ele mais gostaria de comprar.\n' +
-      "Retorne EXCLUSIVAMENTE um JSON no formato: { 'recomendacoes': [id_1, id_2, id_3] }.";
+    const prompt = buildRecommendationsPrompt(estante, catalogo) + JSON_ONLY_SUFFIX;
 
     try {
-      const raw = await this.geminiGenerateContent(apiKey.trim(), [{ text: prompt }]);
-      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
+      const raw = await this.generateText(prompt, 0.25);
+      if (!raw) {
+        return [];
+      }
+      const parsed = parseJsonFromModelText<Record<string, unknown>>(raw);
+      if (!parsed) {
+        return [];
+      }
       const rec = parsed.recomendacoes;
       if (!Array.isArray(rec)) {
         return [];
@@ -266,6 +204,11 @@ export class AiService {
         }
       }
       const unique = [...new Set(ids)];
+      if (unique.length < 3) {
+        this.logger.warn(
+          `Recomendações incompletas (${unique.length}/3). ids=${unique.join(',')} estante=${estante.length} catálogo=${catalogo.length}`,
+        );
+      }
       return unique.slice(0, 3);
     } catch (err) {
       this.logger.warn(`Falha nas recomendações Gemini: ${err instanceof Error ? err.message : String(err)}`);
@@ -273,53 +216,173 @@ export class AiService {
     }
   }
 
-  private normalizarTextoCapa(valor: unknown): string {
-    if (valor === null || valor === undefined) {
-      return '';
+  private normalizarEstanteSkoob(bookshelf: unknown): BookshelfItemPrompt[] {
+    const arr = Array.isArray(bookshelf) ? bookshelf : [];
+    const itens: BookshelfItemPrompt[] = [];
+
+    for (const item of arr.slice(0, 120)) {
+      const row = item as Record<string, unknown>;
+      const ed = (row?.edition ?? row?.edicao ?? row) as Record<string, unknown>;
+      const titulo = String(ed?.title ?? ed?.titulo ?? row?.titulo ?? '').trim();
+      if (!titulo || titulo === '—') {
+        continue;
+      }
+      const autor = String(ed?.author ?? ed?.autor ?? row?.autor ?? 'Autor não informado').trim();
+      const ratingRaw = row?.rating ?? row?.ranking ?? row?.nota;
+      let nota: number | null = null;
+      if (typeof ratingRaw === 'number' && Number.isFinite(ratingRaw)) {
+        nota = Math.min(5, Math.max(0, Math.round(ratingRaw)));
+      } else if (ratingRaw != null) {
+        const p = parseInt(String(ratingRaw), 10);
+        if (Number.isFinite(p)) nota = Math.min(5, Math.max(0, p));
+      }
+      itens.push({
+        titulo,
+        autor,
+        genero: String(ed?.genre ?? ed?.genero ?? row?.genero ?? '—').trim() || '—',
+        nota_usuario: nota,
+        status_leitura: this.rotuloStatusSkoob(row?.type ?? row?.tipo),
+      });
     }
-    return String(valor).trim();
+
+    return itens;
+  }
+
+  private rotuloStatusSkoob(tipo: unknown): string {
+    const n = parseInt(String(tipo ?? ''), 10);
+    if (n === 1) return 'lido';
+    if (n === 2) return 'lendo';
+    if (n === 3) return 'quero ler';
+    if (n === 4) return 'abandonei';
+    if (n === 5) return 'relido';
+    return 'estante';
+  }
+
+  private resolverNotaModeracao(texto: string, nota?: number): number | null {
+    if (nota != null && Number.isFinite(nota)) {
+      return Math.min(5, Math.max(1, Math.round(nota)));
+    }
+    const match = texto.match(/nota\s*(\d)/i);
+    if (match?.[1]) {
+      const n = parseInt(match[1], 10);
+      if (Number.isFinite(n)) return Math.min(5, Math.max(1, n));
+    }
+    return null;
+  }
+
+  private extrairComentarioModeracao(texto: string, nota: number | null): string {
+    let t = texto;
+    if (nota != null) {
+      t = t.replace(/nota\s*\d+/gi, '').trim();
+    }
+    return t;
+  }
+
+  private getTextModel(): LanguageModel | null {
+    const apiKey = this.config.get<string>('GEMINI_API_KEY')?.trim();
+    if (!apiKey) {
+      return null;
+    }
+    const google = createGoogleGenerativeAI({ apiKey });
+    return google(GEMINI_MODEL_ID);
+  }
+
+  private getVisionModel(): LanguageModel | null {
+    const apiKey = this.config.get<string>('GEMINI_API_KEY')?.trim();
+    if (!apiKey) {
+      return null;
+    }
+    const google = createGoogleGenerativeAI({ apiKey });
+    return google(GEMINI_MODEL_VISION_ID);
+  }
+
+  private async generateText(prompt: string, temperature = 0.2): Promise<string | null> {
+    const model = this.getTextModel();
+    if (!model) {
+      return null;
+    }
+    const { text } = await generateText({
+      model,
+      prompt,
+      temperature,
+    });
+    return text?.trim() || null;
+  }
+
+  private async generateWithImages(prompt: string, images: ImageInput[]): Promise<string | null> {
+    const model = this.getVisionModel();
+    if (!model || !images.length) {
+      return null;
+    }
+
+    const content: Array<
+      { type: 'text'; text: string } | { type: 'image'; image: Buffer; mediaType?: string }
+    > = [];
+
+    for (const item of images) {
+      if (item.label) {
+        content.push({ type: 'text', text: item.label });
+      }
+      content.push({ type: 'image', image: item.buffer, mediaType: item.mimeType });
+    }
+    content.push({ type: 'text', text: prompt });
+
+    const { text } = await generateText({
+      model,
+      messages: [{ role: 'user', content }],
+      temperature: 0.2,
+    });
+    return text?.trim() || null;
+  }
+
+  private loadImagesFromPaths(imagePaths: { path: string; type: string }[]): ImageInput[] {
+    const images: ImageInput[] = [];
+
+    for (const item of imagePaths) {
+      let absolutePath = item.path;
+      if (!path.isAbsolute(absolutePath)) {
+        absolutePath = path.resolve(process.cwd(), item.path.replace(/^\//, ''));
+      }
+      if (!fs.existsSync(absolutePath)) {
+        this.logger.warn(`Arquivo de imagem não encontrado: ${absolutePath}`);
+        continue;
+      }
+      const buffer = fs.readFileSync(absolutePath);
+      const mimeType = this.mimeTypeFromPath(absolutePath);
+      images.push({
+        buffer,
+        mimeType,
+        label: `Foto do exemplar — ${item.type}. Analise esta imagem antes de continuar.`,
+      });
+    }
+
+    return images;
+  }
+
+  private extrairCampoTextoCapa(parsed: Record<string, unknown>, chaves: string[]): string {
+    for (const chave of chaves) {
+      const valor = parsed[chave];
+      if (valor === null || valor === undefined) {
+        continue;
+      }
+      const texto = String(valor).trim();
+      if (texto && texto.toLowerCase() !== 'null') {
+        return texto;
+      }
+    }
+    return '';
   }
 
   private normalizarConfiancaCapa(valor: unknown): CoverIdentificationResult['confianca'] {
+    if (typeof valor === 'number' && Number.isFinite(valor)) {
+      if (valor >= 0.75) return 'alta';
+      if (valor >= 0.45) return 'media';
+      return 'baixa';
+    }
     const t = String(valor ?? '').trim().toLowerCase();
-    if (t.includes('alta')) return 'alta';
-    if (t.includes('media') || t.includes('média')) return 'media';
+    if (t.includes('alta') || t.includes('high')) return 'alta';
+    if (t.includes('media') || t.includes('média') || t.includes('medium')) return 'media';
     return 'baixa';
-  }
-
-  private safeJsonSnippet(value: unknown, maxLen: number): string {
-    try {
-      const s = JSON.stringify(value);
-      if (s.length <= maxLen) return s;
-      return s.slice(0, maxLen) + '…';
-    } catch {
-      return String(value).slice(0, maxLen);
-    }
-  }
-
-  private async geminiGenerateContent(apiKey: string, parts: Part[]): Promise<string> {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_ID });
-    const result = await model.generateContent(parts);
-    return result.response.text();
-  }
-
-  private parseJsonFromGemini(raw: string): unknown {
-    const cleaned = raw
-      .replace(/```json/gi, '')
-      .replace(/```/g, '')
-      .trim();
-    const t = this.extractJsonObject(cleaned);
-    return JSON.parse(t);
-  }
-
-  private extractJsonObject(text: string): string {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return text.slice(start, end + 1);
-    }
-    return text;
   }
 
   private mimeTypeFromPath(filePath: string): string {
@@ -335,20 +398,19 @@ export class AiService {
   }
 
   private parseEvaluationJson(raw: string, fallback: BookConditionEvaluation): BookConditionEvaluation {
-    try {
-      const parsed = this.parseJsonFromGemini(raw) as Record<string, unknown>;
-      const notaRaw = parsed.nota_conservacao;
-      const descRaw = parsed.descricao_conservacao;
-      let nota = typeof notaRaw === 'number' ? Math.round(notaRaw) : parseInt(String(notaRaw), 10);
-      if (Number.isNaN(nota)) nota = fallback.nota_conservacao;
-      nota = Math.min(5, Math.max(1, nota));
-      const descricao =
-        typeof descRaw === 'string' && descRaw.trim().length > 0
-          ? descRaw.trim()
-          : fallback.descricao_conservacao;
-      return { nota_conservacao: nota, descricao_conservacao: descricao };
-    } catch {
+    const parsed = parseJsonFromModelText<Record<string, unknown>>(raw);
+    if (!parsed) {
       return fallback;
     }
+    const notaRaw = parsed.nota_conservacao;
+    const descRaw = parsed.descricao_conservacao;
+    let nota = typeof notaRaw === 'number' ? Math.round(notaRaw) : parseInt(String(notaRaw), 10);
+    if (Number.isNaN(nota)) nota = fallback.nota_conservacao;
+    nota = Math.min(5, Math.max(1, nota));
+    const descricao =
+      typeof descRaw === 'string' && descRaw.trim().length > 0
+        ? descRaw.trim()
+        : fallback.descricao_conservacao;
+    return { nota_conservacao: nota, descricao_conservacao: descricao };
   }
 }

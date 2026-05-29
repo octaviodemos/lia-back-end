@@ -13,8 +13,8 @@ export class SkoobService {
   ) {}
 
   async fetchUserBookshelf(skoobUserId: string): Promise<unknown[]> {
-    const base = (this.config.get<string>('SKOOB_API_BASE_URL') || 'http://localhost:5000').replace(/\/$/, '');
-    const url = `${base}/users/${encodeURIComponent(skoobUserId)}/bookshelf`;
+    const base = (this.config.get<string>('SKOOB_API_BASE_URL') || 'http://localhost:3000').replace(/\/$/, '');
+    const url = `${base}/api/users/${encodeURIComponent(skoobUserId)}/bookshelf`;
     try {
       const res = await firstValueFrom(this.http.get<unknown>(url, { validateStatus: () => true }));
       const status = res.status;

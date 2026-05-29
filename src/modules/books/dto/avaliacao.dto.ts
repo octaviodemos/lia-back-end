@@ -16,6 +16,9 @@ export class AvaliacaoDto {
   @ApiProperty({ example: 'Muito bom', required: false })
   comentario?: string;
 
+  @ApiProperty({ example: false, required: false })
+  tem_spoiler?: boolean;
+
   @ApiProperty({ example: '2025-11-14T12:00:00Z' })
   data_avaliacao!: Date;
 

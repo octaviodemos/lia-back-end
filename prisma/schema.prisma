@@ -42,9 +42,21 @@ model Usuario {
   publicacoes          Publicacao[]
   publicacao_comentarios PublicacaoComentario[]
   publicacao_curtidas  PublicacaoCurtida[]
-  
+  recomendacaoSkoobCache RecomendacaoSkoobCache?
 
   @@map("usuarios")
+}
+
+model RecomendacaoSkoobCache {
+  id_usuario    Int      @id
+  skoob_user_id String   @db.VarChar(128)
+  livro_ids     Int[]
+  expires_at    DateTime
+  atualizado_em DateTime @default(now()) @updatedAt
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@map("recomendacoes_skoob_cache")
 }
 
 model Livro {
@@ -263,6 +275,7 @@ model Avaliacao {
   nota           Int
   comentario     String?  @db.Text
   aprovado       Boolean  @default(false)
+  tem_spoiler    Boolean  @default(false)
   data_avaliacao DateTime @default(now())
 
   livro   Livro   @relation(fields: [id_livro], references: [id_livro])
