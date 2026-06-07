@@ -12,7 +12,7 @@
     "editora": "Garnier",
     "ano_publicacao": 1899,
     "isbn": "9788572329583",
-  "capa_url": "https://via.placeholder.com/200x300?text=Sem+Capa",
+    "capa_url": "https://covers.openlibrary.org/b/id/647501-M.jpg",
     "estoque": {
       "quantidade": 10,
       "preco": "39.90",
@@ -51,7 +51,7 @@
     "editora": "Rocco",
     "ano_publicacao": 1977,
     "isbn": "9788532510201",
-  "capa_url": "https://via.placeholder.com/200x300?text=Sem+Capa",
+    "capa_url": "https://covers.openlibrary.org/b/id/650866-M.jpg",
     "estoque": {
       "quantidade": 5,
       "preco": "29.90",

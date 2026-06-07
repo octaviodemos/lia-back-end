@@ -194,7 +194,7 @@ const LIVROS_CATALOGO = [
     nota: 5,
     destaque: true,
     preco: '32.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9788572329583-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/647501-M.jpg',
   },
   {
     titulo: 'Grande sertão: veredas',
@@ -207,7 +207,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '45.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9788572326137-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/13909068-M.jpg',
   },
   {
     titulo: 'Ficciones',
@@ -220,7 +220,7 @@ const LIVROS_CATALOGO = [
     nota: 5,
     destaque: true,
     preco: '58.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780060929756-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/10832290-M.jpg',
   },
   {
     titulo: 'Duna',
@@ -233,7 +233,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '64.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780441172719-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/11481354-M.jpg',
   },
   {
     titulo: 'Cem anos de solidão',
@@ -246,7 +246,7 @@ const LIVROS_CATALOGO = [
     nota: 5,
     destaque: false,
     preco: '39.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9781400034710-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/12627383-M.jpg',
   },
   {
     titulo: 'O processo',
@@ -259,7 +259,7 @@ const LIVROS_CATALOGO = [
     nota: 3,
     destaque: false,
     preco: '28.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780805209990-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/997423-M.jpg',
   },
   {
     titulo: 'A metamorfose',
@@ -272,7 +272,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '19.50',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780553213690-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/12820198-M.jpg',
   },
   {
     titulo: 'Fahrenheit 451',
@@ -285,7 +285,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '24.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9781451673319-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/12993656-M.jpg',
   },
   {
     titulo: 'Morte na Mesopotâmia',
@@ -298,7 +298,7 @@ const LIVROS_CATALOGO = [
     nota: 3,
     destaque: false,
     preco: '36.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780062074746-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/12855104-M.jpg',
   },
   {
     titulo: 'A cor que caiu do céu',
@@ -311,7 +311,7 @@ const LIVROS_CATALOGO = [
     nota: 2,
     destaque: false,
     preco: '18.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9781840226238-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/4920850-M.jpg',
   },
   {
     titulo: 'A arte da guerra',
@@ -324,7 +324,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '22.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9788544000424-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/4849549-M.jpg',
   },
   {
     titulo: 'Sapiens',
@@ -337,7 +337,7 @@ const LIVROS_CATALOGO = [
     nota: 5,
     destaque: true,
     preco: '49.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780062316110-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/8634250-M.jpg',
   },
   {
     titulo: 'A revolução dos bichos',
@@ -350,7 +350,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '19.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780141036137-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/11261770-M.jpg',
   },
   {
     titulo: 'O homem do castelo alto',
@@ -363,7 +363,7 @@ const LIVROS_CATALOGO = [
     nota: 3,
     destaque: false,
     preco: '27.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780241956196-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/420452-M.jpg',
   },
   {
     titulo: 'A culpa é das estrelas',
@@ -376,7 +376,7 @@ const LIVROS_CATALOGO = [
     nota: 4,
     destaque: false,
     preco: '30.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780141345659-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/7418786-M.jpg',
   },
   {
     titulo: 'A garota no trem',
@@ -389,99 +389,9 @@ const LIVROS_CATALOGO = [
     nota: 3,
     destaque: false,
     preco: '29.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9781101990264-M.jpg',
+    capa: 'https://covers.openlibrary.org/b/id/13523038-M.jpg',
   },
-  {
-    titulo: 'A culpa do IBGE',
-    isbn: '9780000000001',
-    editora: 'Dados',
-    ano: 2020,
-    sinopse: 'Livro fictício de exemplo de seed: humor sobre estatísticas (placeholder).',
-    autores: ['Autor Fictício'],
-    generos: ['Humor', 'Não-ficção'],
-    nota: 1,
-    destaque: false,
-    preco: '9.90',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000001-M.jpg',
-  },
-  {
-    titulo: 'Cálculo 1: limites e derivadas',
-    isbn: '9780000000002',
-    editora: 'Edu',
-    ano: 2018,
-    sinopse: 'Livro didático de exemplo: introdução a limites, continuidade e derivada.',
-    autores: ['Prof. Exemplar', 'Mentora Técnica'],
-    generos: ['Educação', 'Matemática'],
-    nota: 4,
-    destaque: false,
-    preco: '99.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000002-M.jpg',
-  },
-  {
-    titulo: 'Cozinha do sertão',
-    isbn: '9780000000003',
-    editora: 'Cultural',
-    ano: 2016,
-    sinopse: 'Receitas, histórias e ingredientes de uma região inventada de seed.',
-    autores: ['Cozinheiro Regional'],
-    generos: ['Gastronomia', 'Cultura'],
-    nota: 5,
-    destaque: false,
-    preco: '55.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000003-M.jpg',
-  },
-  {
-    titulo: 'A ordem e o jardim',
-    isbn: '9780000000004',
-    editora: 'Verde',
-    ano: 2014,
-    sinopse: 'Ficção botânica leve: um jardim, uma conspiração de camélias (seed).',
-    autores: ['B. Folha'],
-    generos: ['Contos', 'Ficção'],
-    nota: 2,
-    destaque: false,
-    preco: '11.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000004-M.jpg',
-  },
-  {
-    titulo: 'Cidades invisíveis reimaginadas',
-    isbn: '9780000000005',
-    editora: 'Orbital',
-    ano: 2021,
-    sinopse: 'Homenagem conceitual a cidades, mapas e viagens lícitas de seed.',
-    autores: ['C. Cidade'],
-    generos: ['Viagem', 'Ensaio'],
-    nota: 4,
-    destaque: false,
-    preco: '40.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000005-M.jpg',
-  },
-  {
-    titulo: 'Banco de Dados: modelagem',
-    isbn: '9780000000006',
-    editora: 'Tech',
-    ano: 2022,
-    sinopse: 'Normalização, MER e SQL — exemplar didático (seed, não reutilizar título comercial).',
-    autores: ['D. Dados'],
-    generos: ['Tecnologia', 'Educação'],
-    nota: 3,
-    destaque: true,
-    preco: '120.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000006-M.jpg',
-  },
-  {
-    titulo: 'Memórias de quem fica em casa',
-    isbn: '9780000000007',
-    editora: 'Diário',
-    ano: 2019,
-    sinopse: 'Crônicas pessoais inventadas, diversidade de vozes (dados de seed).',
-    autores: ['Ana Rotina', 'Beto Sábado'],
-    generos: ['Crônica', 'Contemporânea'],
-    nota: 3,
-    destaque: false,
-    preco: '16.00',
-    capa: 'https://covers.openlibrary.org/b/isbn/9780000000007-M.jpg',
-  },
+
 ];
 
 async function seedUsuariosClientes() {
@@ -566,7 +476,36 @@ async function seedLivrosCatalogo() {
             estoque: { some: { preco: ex.preco } },
           },
         });
-        if (dup) continue;
+        if (dup) {
+          try {
+            const newCover = grupo.capa || null;
+            if (newCover) {
+              const capaImg = await prisma.imagemLivro.findFirst({
+                where: { id_livro: dup.id_livro, tipo_imagem: 'Capa' },
+              });
+              if (!capaImg || capaImg.url_imagem !== newCover) {
+                if (capaImg) {
+                  await prisma.imagemLivro.update({
+                    where: { id_imagem_livro: capaImg.id_imagem_livro },
+                    data: { url_imagem: newCover },
+                  });
+                } else {
+                  await prisma.imagemLivro.create({
+                    data: {
+                      id_livro: dup.id_livro,
+                      url_imagem: newCover,
+                      tipo_imagem: 'Capa',
+                    },
+                  });
+                }
+                console.log(`Atualizada imagem Capa para ${titulo} -> ${newCover}`);
+              }
+            }
+          } catch (uErr) {
+            console.error('Erro ao atualizar capa para livro existente', titulo, uErr.message || uErr);
+          }
+          continue;
+        }
         seedIdx += 1;
         const b = {
           ...grupo,
