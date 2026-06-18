@@ -4,19 +4,19 @@ require('dotenv').config();
 
 const prisma = new PrismaClient();
 
+// ──── Open Library cover helper (sem rate-limit, sem API key) ────
+function openLibraryCover(isbn) {
+  return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+}
+
 function buildImagensCreateWithCapa(seedOffset, capaUrlPreferida) {
-  const base = 10 + (Math.abs(Number(seedOffset)) % 900) * 5;
-  const pick = (k) => Math.min(999, base + k);
   const capa =
     capaUrlPreferida && String(capaUrlPreferida).length > 0 && String(capaUrlPreferida).length <= 255
       ? String(capaUrlPreferida)
-      : `https://picsum.photos/id/${pick(0)}/320/480`;
+      : null;
+  if (!capa) return [];
   return [
     { url_imagem: capa, tipo_imagem: TipoImagem.Capa },
-    { url_imagem: `https://picsum.photos/id/${pick(1)}/320/480`, tipo_imagem: TipoImagem.Contracapa },
-    { url_imagem: `https://picsum.photos/id/${pick(2)}/320/480`, tipo_imagem: TipoImagem.Lombada },
-    { url_imagem: `https://picsum.photos/id/${pick(3)}/320/480`, tipo_imagem: TipoImagem.MioloPaginas },
-    { url_imagem: `https://picsum.photos/id/${pick(4)}/320/480`, tipo_imagem: TipoImagem.DetalhesAvarias },
   ];
 }
 
@@ -523,12 +523,145 @@ async function seedLivrosCatalogo() {
   }
 }
 
+// ──── Catálogo extra com capas reais via Open Library ────
+const LIVROS_OPEN_LIBRARY = [
+  // ── Literatura Brasileira & Lusófona ──
+  { isbn: '9788535914849', titulo: 'O Alquimista', autores: ['Paulo Coelho'], generos: ['Romance', 'Aventura'], editora: 'Rocco', ano: 1988, sinopse: 'Um jovem pastor espanhol empreende uma jornada épica em busca de um tesouro escondido nas Pirâmides do Egito.', preco: '34.90', destaque: true },
+  // ── Ficção Científica & Fantasia ──
+  { isbn: '9780547928227', titulo: 'The Hobbit', autores: ['J.R.R. Tolkien'], generos: ['Fantasia', 'Aventura'], editora: 'Mariner Books', ano: 1937, sinopse: 'Bilbo Bolseiro parte em uma aventura inesperada com treze anões para reconquistar o tesouro guardado pelo dragão Smaug.', preco: '54.90', destaque: true },
+  { isbn: '9780439023481', titulo: 'The Hunger Games', autores: ['Suzanne Collins'], generos: ['Ficção científica', 'Jovem adulto'], editora: 'Scholastic', ano: 2008, sinopse: 'Em um futuro distópico, Katniss Everdeen luta pela sobrevivência em um jogo televisionado mortal.', preco: '39.90', destaque: true },
+  { isbn: '9780060850524', titulo: 'Brave New World', autores: ['Aldous Huxley'], generos: ['Ficção científica', 'Distopia'], editora: 'Harper Perennial', ano: 1932, sinopse: 'Uma sociedade futurista controlada pelo prazer, engenharia genética e conformidade social.', preco: '29.00' },
+  { isbn: '9780385490818', titulo: 'The Handmaid\'s Tale', autores: ['Margaret Atwood'], generos: ['Ficção científica', 'Distopia'], editora: 'Anchor', ano: 1985, sinopse: 'Em Gilead, uma teocracia totalitária, as mulheres perderam todos os direitos e são forçadas à servidão reprodutiva.', preco: '38.00' },
+  { isbn: '9780593135204', titulo: 'Project Hail Mary', autores: ['Andy Weir'], generos: ['Ficção científica', 'Aventura'], editora: 'Ballantine', ano: 2021, sinopse: 'Um astronauta solitário acorda sem memória em uma nave espacial com a missão de salvar a Terra.', preco: '52.00', destaque: true },
+  // ── Suspense & Terror ──
+  { isbn: '9780307387899', titulo: 'O Iluminado', autores: ['Stephen King'], generos: ['Terror', 'Suspense'], editora: 'Anchor', ano: 1977, sinopse: 'Jack Torrance aceita o cargo de zelador de inverno no Hotel Overlook, onde forças sobrenaturais ameaçam sua família.', preco: '45.00' },
+  { isbn: '9780385333481', titulo: 'O Caçador de Pipas', autores: ['Khaled Hosseini'], generos: ['Romance', 'Drama'], editora: 'Riverhead', ano: 2003, sinopse: 'A história de amizade e redenção entre dois meninos no Afeganistão dilacerado pela guerra.', preco: '39.90' },
+  { isbn: '9780307474278', titulo: 'A Estrada', autores: ['Cormac McCarthy'], generos: ['Ficção', 'Pós-apocalíptico'], editora: 'Vintage', ano: 2006, sinopse: 'Um pai e seu filho caminham por uma América devastada, tentando sobreviver em um mundo sem esperança.', preco: '35.00' },
+  // ── Clássicos internacionais ──
+  { isbn: '9780679783268', titulo: 'Pride and Prejudice', autores: ['Jane Austen'], generos: ['Romance', 'Clássico'], editora: 'Modern Library', ano: 1813, sinopse: 'Elizabeth Bennet e o orgulhoso Mr. Darcy superam preconceitos e diferenças sociais em busca do amor verdadeiro.', preco: '25.00' },
+  { isbn: '9780140449136', titulo: 'Crime and Punishment', autores: ['Fyodor Dostoevsky'], generos: ['Romance', 'Clássico'], editora: 'Penguin', ano: 1866, sinopse: 'Raskólnikov comete um assassinato e enfrenta o tormento psicológico da culpa e da redenção.', preco: '28.00' },
+  { isbn: '9780679720201', titulo: 'The Stranger', autores: ['Albert Camus'], generos: ['Ficção', 'Filosofia'], editora: 'Vintage', ano: 1942, sinopse: 'Meursault, um homem indiferente ao mundo, comete um crime e enfrenta o absurdo da existência.', preco: '26.00' },
+  { isbn: '9780316769488', titulo: 'The Catcher in the Rye', autores: ['J.D. Salinger'], generos: ['Romance', 'Jovem adulto'], editora: 'Little, Brown', ano: 1951, sinopse: 'Holden Caulfield vaga por Nova York questionando a hipocrisia do mundo adulto.', preco: '30.00' },
+  // ── Não-ficção ──
+  { isbn: '9780735211292', titulo: 'Atomic Habits', autores: ['James Clear'], generos: ['Não-ficção', 'Autoajuda'], editora: 'Avery', ano: 2018, sinopse: 'Um guia prático para construir bons hábitos e eliminar os ruins usando pequenas mudanças diárias.', preco: '48.90', destaque: true },
+  { isbn: '9780525559474', titulo: 'Becoming', autores: ['Michelle Obama'], generos: ['Biografia', 'Não-ficção'], editora: 'Crown', ano: 2018, sinopse: 'A autobiografia da ex-primeira-dama dos EUA, da infância em Chicago à Casa Branca.', preco: '55.00' },
+  // ── Harry Potter ──
+  { isbn: '9780439064873', titulo: 'Harry Potter and the Chamber of Secrets', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 1999, sinopse: 'Harry retorna a Hogwarts e descobre que uma câmara secreta foi aberta, libertando um monstro antigo.', preco: '35.00' },
+  { isbn: '9780439139595', titulo: 'Harry Potter and the Prisoner of Azkaban', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 1999, sinopse: 'Sirius Black escapa de Azkaban e Harry descobre verdades sobre o passado de seus pais.', preco: '35.00' },
+  { isbn: '9780545010221', titulo: 'Harry Potter and the Deathly Hallows', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 2007, sinopse: 'Harry, Ron e Hermione partem em busca das Horcruxes para derrotar Voldemort de uma vez por todas.', preco: '42.00' },
+  // ── Romance contemporâneo ──
+  { isbn: '9780062024039', titulo: 'Divergent', autores: ['Veronica Roth'], generos: ['Ficção científica', 'Jovem adulto'], editora: 'Katherine Tegen', ano: 2011, sinopse: 'Tris Prior descobre que é Divergente numa sociedade dividida em cinco facções com regras rígidas.', preco: '33.00' },
+  { isbn: '9780143105428', titulo: 'The Goldfinch', autores: ['Donna Tartt'], generos: ['Romance', 'Drama'], editora: 'Back Bay', ano: 2013, sinopse: 'Após um atentado no Metropolitan Museum, o jovem Theo Decker carrega consigo uma pintura que mudará sua vida.', preco: '47.00' },
+  // ── Mais Literatura Brasileira ──
+  // ── Mais Fantasia & Ficção Científica ──
+  { isbn: '9780618640157', titulo: 'The Lord of the Rings', autores: ['J.R.R. Tolkien'], generos: ['Fantasia', 'Aventura'], editora: 'Houghton Mifflin', ano: 1954, sinopse: 'A jornada épica de Frodo para destruir o Um Anel nas fendas da Montanha da Perdição.', preco: '79.90', destaque: true },
+  { isbn: '9780451457998', titulo: 'The Eye of the World', autores: ['Robert Jordan'], generos: ['Fantasia', 'Épico'], editora: 'Tor', ano: 1990, sinopse: 'Rand al\'Thor e seus amigos fogem de sua aldeia perseguidos por criaturas sombrias, iniciando uma jornada épica.', preco: '45.00' },
+  { isbn: '9780441569595', titulo: 'Neuromancer', autores: ['William Gibson'], generos: ['Ficção científica', 'Cyberpunk'], editora: 'Ace', ano: 1984, sinopse: 'Um hacker decadente é contratado para o maior golpe cibernético da história no ciberespaço.', preco: '36.00' },
+  { isbn: '9780553382563', titulo: 'A Game of Thrones', autores: ['George R.R. Martin'], generos: ['Fantasia', 'Épico'], editora: 'Bantam', ano: 1996, sinopse: 'Famílias nobres disputam o Trono de Ferro enquanto uma ameaça antiga desperta além da Muralha.', preco: '49.90', destaque: true },
+  { isbn: '9780062561022', titulo: 'The Name of the Wind', autores: ['Patrick Rothfuss'], generos: ['Fantasia', 'Aventura'], editora: 'DAW', ano: 2007, sinopse: 'Kvothe, lendário mago e aventureiro, narra sua história desde a infância até se tornar o homem mais procurado do mundo.', preco: '42.00' },
+  // ── Mais Terror & Suspense ──
+  { isbn: '9781501142970', titulo: 'It', autores: ['Stephen King'], generos: ['Terror', 'Suspense'], editora: 'Scribner', ano: 1986, sinopse: 'Sete crianças enfrentam uma entidade maligna que se alimenta do medo e assume a forma de um palhaço em Derry, Maine.', preco: '55.00', destaque: true },
+  { isbn: '9780307743657', titulo: 'Gone Girl', autores: ['Gillian Flynn'], generos: ['Thriller', 'Mistério'], editora: 'Crown', ano: 2012, sinopse: 'No dia do quinto aniversário de casamento, Amy desaparece e Nick se torna o principal suspeito.', preco: '38.00' },
+  { isbn: '9780525478812', titulo: 'The Girl with the Dragon Tattoo', autores: ['Stieg Larsson'], generos: ['Thriller', 'Mistério'], editora: 'Knopf', ano: 2005, sinopse: 'Um jornalista e uma hacker investigam o desaparecimento de uma mulher de uma rica família sueca há 40 anos.', preco: '41.00' },
+  // ── Mais Clássicos ──
+  { isbn: '9780142437247', titulo: 'Great Expectations', autores: ['Charles Dickens'], generos: ['Romance', 'Clássico'], editora: 'Penguin', ano: 1861, sinopse: 'O órfão Pip recebe uma herança misteriosa e parte para Londres em busca de ascensão social e amor.', preco: '24.00' },
+  { isbn: '9780486284736', titulo: 'Frankenstein', autores: ['Mary Shelley'], generos: ['Terror', 'Clássico'], editora: 'Dover', ano: 1818, sinopse: 'Victor Frankenstein cria um ser a partir de partes de cadáveres e enfrenta as consequências de brincar de Deus.', preco: '18.00' },
+  { isbn: '9780141439518', titulo: 'Dracula', autores: ['Bram Stoker'], generos: ['Terror', 'Clássico'], editora: 'Penguin', ano: 1897, sinopse: 'O Conde Drácula viaja da Transilvânia à Inglaterra em busca de novas vítimas para saciar sua sede de sangue.', preco: '22.00' },
+  { isbn: '9780060934347', titulo: 'Don Quixote', autores: ['Miguel de Cervantes'], generos: ['Romance', 'Clássico'], editora: 'Ecco', ano: 1605, sinopse: 'Um fidalgo enlouquecido pela leitura de romances de cavalaria sai pelo mundo para desfazer agravos e endireitar injustiças.', preco: '35.00' },
+  // ── Ciência & Filosofia ──
+  { isbn: '9780553380163', titulo: 'A Brief History of Time', autores: ['Stephen Hawking'], generos: ['Ciência', 'Não-ficção'], editora: 'Bantam', ano: 1988, sinopse: 'Uma viagem pela cosmologia moderna: buracos negros, Big Bang e a natureza do tempo.', preco: '39.90' },
+  { isbn: '9780393356250', titulo: 'Astrophysics for People in a Hurry', autores: ['Neil deGrasse Tyson'], generos: ['Ciência', 'Não-ficção'], editora: 'Norton', ano: 2017, sinopse: 'Uma introdução acessível e divertida aos grandes mistérios do universo.', preco: '32.00' },
+  // ── Infantojuvenil & Young Adult ──
+  { isbn: '9780064471046', titulo: 'Charlotte\'s Web', autores: ['E.B. White'], generos: ['Infantojuvenil', 'Fábula'], editora: 'HarperCollins', ano: 1952, sinopse: 'A aranha Charlotte usa suas teias para salvar seu amigo, o porquinho Wilbur, do abatedouro.', preco: '22.00' },
+  { isbn: '9780439554930', titulo: 'Harry Potter and the Philosopher\'s Stone', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 1997, sinopse: 'Harry descobre que é um bruxo e inicia sua jornada mágica em Hogwarts.', preco: '34.90', destaque: true },
+  { isbn: '9780142410318', titulo: 'Percy Jackson and the Lightning Thief', autores: ['Rick Riordan'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Disney Hyperion', ano: 2005, sinopse: 'Percy descobre que é filho de Poseidon e embarca numa missão para evitar uma guerra entre os deuses do Olimpo.', preco: '33.00' },
+  // ── Romance & Drama Moderno ──
+  { isbn: '9780735219106', titulo: 'Where the Crawdads Sing', autores: ['Delia Owens'], generos: ['Romance', 'Mistério'], editora: 'Putnam', ano: 2018, sinopse: 'Kya Clark, a "Garota do Brejo", cresce sozinha nos pântanos da Carolina do Norte e se torna suspeita de assassinato.', preco: '44.00', destaque: true },
+  { isbn: '9780670026197', titulo: 'The Fault in Our Stars', autores: ['John Green'], generos: ['Romance', 'Jovem adulto'], editora: 'Dutton', ano: 2012, sinopse: 'Hazel e Augustus, dois adolescentes com câncer, vivem uma história de amor que desafia a brevidade da vida.', preco: '30.00' },
+  { isbn: '9780385737951', titulo: 'Wonder', autores: ['R.J. Palacio'], generos: ['Infantojuvenil', 'Drama'], editora: 'Knopf', ano: 2012, sinopse: 'Auggie Pullman, nascido com uma deformidade facial, enfrenta o desafio de frequentar a escola pela primeira vez.', preco: '28.00' },
+  { isbn: '9781471156267', titulo: 'It Ends with Us', autores: ['Colleen Hoover'], generos: ['Romance', 'Drama'], editora: 'Atria', ano: 2016, sinopse: 'Lily supera uma infância difícil e se apaixona por um neurocirurgião, mas enfrenta dilemas ao repetir padrões do passado.', preco: '36.00' },
+  // ── Mais Bestsellers (Novos) ──
+  { isbn: '9780439139601', titulo: 'Harry Potter and the Goblet of Fire', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 2000, sinopse: 'O quarto ano de Harry em Hogwarts traz o perigoso Torneio Tribruxo.', preco: '45.00' },
+  { isbn: '9780439358071', titulo: 'Harry Potter and the Order of the Phoenix', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Scholastic', ano: 2003, sinopse: 'Harry descobre que a comunidade bruxa não acredita no retorno de Voldemort e funda a Armada de Dumbledore.', preco: '49.00' },
+  { isbn: '9781408855652', titulo: 'Harry Potter and the Half-Blood Prince', autores: ['J.K. Rowling'], generos: ['Fantasia', 'Jovem adulto'], editora: 'Bloomsbury', ano: 2005, sinopse: 'Harry descobre o passado de Lord Voldemort enquanto se prepara para a guerra.', preco: '45.00' },
+  { isbn: '9780451524935', titulo: '1984', autores: ['George Orwell'], generos: ['Ficção', 'Distopia'], editora: 'Signet', ano: 1949, sinopse: 'O Grande Irmão observa tudo em uma sociedade totalitária e sem liberdade.', preco: '25.00' },
+  { isbn: '9780451526342', titulo: 'Animal Farm', autores: ['George Orwell'], generos: ['Ficção', 'Fábula'], editora: 'Signet', ano: 1945, sinopse: 'Uma sátira política onde os animais de uma fazenda tomam o controle.', preco: '20.00' },
+  { isbn: '9781451673319', titulo: 'Fahrenheit 451', autores: ['Ray Bradbury'], generos: ['Ficção científica', 'Distopia'], editora: 'Simon & Schuster', ano: 1953, sinopse: 'Em um futuro opressivo, bombeiros são contratados para queimar livros.', preco: '28.00' },
+  { isbn: '9780060935467', titulo: 'To Kill a Mockingbird', autores: ['Harper Lee'], generos: ['Ficção', 'Clássico'], editora: 'Harper Perennial', ano: 1960, sinopse: 'Uma história sobre racismo e injustiça no sul dos Estados Unidos.', preco: '30.00' },
+  { isbn: '9780743273565', titulo: 'The Great Gatsby', autores: ['F. Scott Fitzgerald'], generos: ['Ficção', 'Clássico'], editora: 'Scribner', ano: 1925, sinopse: 'A decadência do sonho americano nos loucos anos 1920.', preco: '22.00' },
+  { isbn: '9780062316097', titulo: 'Sapiens: A Brief History of Humankind', autores: ['Yuval Noah Harari'], generos: ['Não-ficção', 'História'], editora: 'Harper', ano: 2015, sinopse: 'Uma exploração fascinante sobre a história e a evolução da humanidade.', preco: '55.00' },
+  { isbn: '9780553418026', titulo: 'The Martian', autores: ['Andy Weir'], generos: ['Ficção científica', 'Aventura'], editora: 'Crown', ano: 2014, sinopse: 'Um astronauta abandonado em Marte precisa usar sua inteligência para sobreviver.', preco: '42.00' },
+  { isbn: '9780307887443', titulo: 'Ready Player One', autores: ['Ernest Cline'], generos: ['Ficção científica', 'Aventura'], editora: 'Crown', ano: 2011, sinopse: 'Em 2045, o mundo se refugia na realidade virtual OASIS, onde um caçador de recompensas bilionário escondeu seu testamento.', preco: '38.00' },
+  { isbn: '9780441172719', titulo: 'Dune', autores: ['Frank Herbert'], generos: ['Ficção científica', 'Épico'], editora: 'Ace', ano: 1965, sinopse: 'Política, religião e ecologia se misturam no deserto árido do planeta Arrakis.', preco: '48.00' },
+  { isbn: '9780143034902', titulo: 'The Shadow of the Wind', autores: ['Carlos Ruiz Zafón'], generos: ['Ficção', 'Mistério'], editora: 'Penguin', ano: 2004, sinopse: 'Um jovem descobre um livro misterioso em Barcelona pós-Guerra Civil e é arrastado para um labirinto de segredos.', preco: '35.00' },
+  { isbn: '9780439023511', titulo: 'Mockingjay', autores: ['Suzanne Collins'], generos: ['Ficção científica', 'Jovem adulto'], editora: 'Scholastic', ano: 2010, sinopse: 'Katniss Everdeen se torna o símbolo da rebelião contra a Capital.', preco: '39.90' },
+];
+
+async function seedFromOpenLibrary() {
+  console.log('\n📚 Iniciando seed com capas da Open Library...\n');
+  let created = 0, skipped = 0;
+
+  for (const b of LIVROS_OPEN_LIBRARY) {
+    try {
+      const existing = await prisma.livro.findFirst({ where: { isbn: b.isbn } });
+      if (existing) { skipped++; continue; }
+
+      const capaUrl = openLibraryCover(b.isbn);
+
+      const createdLivro = await prisma.livro.create({
+        data: {
+          titulo: b.titulo,
+          sinopse: b.sinopse || null,
+          editora: b.editora || null,
+          ano_publicacao: b.ano || null,
+          isbn: b.isbn,
+          nota_conservacao: 5,
+          descricao_conservacao: null,
+          destaque_vitrine: !!b.destaque,
+          imagens: {
+            create: buildImagensCreateWithCapa(9000 + created, capaUrl),
+          },
+        },
+      });
+
+      for (const authorName of (b.autores || [])) {
+        let author = await prisma.autor.findFirst({ where: { nome_completo: authorName } });
+        if (!author) author = await prisma.autor.create({ data: { nome_completo: authorName } });
+        await prisma.livroAutor.create({ data: { id_livro: createdLivro.id_livro, id_autor: author.id_autor } });
+      }
+
+      for (const generoName of (b.generos || [])) {
+        let genero = await prisma.genero.findUnique({ where: { nome: generoName } }).catch(() => null);
+        if (!genero) genero = await prisma.genero.create({ data: { nome: generoName } });
+        await prisma.livroGenero.create({ data: { id_livro: createdLivro.id_livro, id_genero: genero.id_genero } });
+      }
+
+      await prisma.estoque.create({
+        data: { id_livro: createdLivro.id_livro, preco: b.preco || '29.90', condicao: 'novo', disponivel: true },
+      });
+
+      created++;
+      console.log(`  ✓ ${b.titulo} — capa: ${capaUrl}`);
+    } catch (err) {
+      console.error(`  ✗ Erro ao criar ${b.titulo}:`, err.message || err);
+    }
+  }
+  console.log(`\n📚 Open Library seed concluído: ${created} criados, ${skipped} já existiam\n`);
+}
+
 async function runAll() {
   try {
     await main();
     await seedUsuariosClientes();
-    await seedLivrosCatalogo();
-    await importBooks();
+    
+    console.log('Limpando livros antigos do banco...');
+    await prisma.estoque.deleteMany();
+    await prisma.livroAutor.deleteMany();
+    await prisma.livroGenero.deleteMany();
+    await prisma.imagemLivro.deleteMany();
+    await prisma.livro.deleteMany();
+
+    await seedFromOpenLibrary();
   } catch (e) {
     console.error(e);
     process.exit(1);
