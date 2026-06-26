@@ -69,7 +69,28 @@ export class RepairsRepository {
         orderBy,
         skip,
         take,
-        include: { fotos: true, usuario: { select: { id_usuario: true, nome: true, email: true } } },
+        include: {
+          fotos: true,
+          usuario: {
+            select: {
+              id_usuario: true,
+              nome: true,
+              email: true,
+              telefone: true,
+              enderecos_entrega: {
+                select: {
+                  id_endereco: true,
+                  rua: true,
+                  numero: true,
+                  complemento: true,
+                  cep: true,
+                  cidade: true,
+                  estado: true,
+                },
+              },
+            },
+          },
+        },
       }),
       this.prisma.solicitacaoReforma.count({ where }),
     ]);

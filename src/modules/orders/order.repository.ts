@@ -270,7 +270,25 @@ export class OrderRepository {
             },
           },
           pagamento: true,
-          cliente: { select: { id_usuario: true, nome: true, email: true } },
+          cliente: {
+            select: {
+              id_usuario: true,
+              nome: true,
+              email: true,
+              telefone: true,
+              enderecos_entrega: {
+                select: {
+                  id_endereco: true,
+                  rua: true,
+                  numero: true,
+                  complemento: true,
+                  cep: true,
+                  cidade: true,
+                  estado: true,
+                },
+              },
+            },
+          },
         },
         skip: (page - 1) * limit,
         take: limit,

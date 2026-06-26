@@ -56,6 +56,15 @@ export class OffersService {
       resposta_admin: o.resposta_admin,
       data_oferta: o.data_oferta,
       imagens,
+      usuario: o.usuario
+        ? {
+            id_usuario: o.usuario.id_usuario,
+            nome: o.usuario.nome,
+            email: o.usuario.email,
+            telefone: o.usuario.telefone,
+            enderecos_entrega: o.usuario.enderecos_entrega ?? [],
+          }
+        : null,
     };
 
     if (o.preco_sugerido !== undefined && o.preco_sugerido !== null) {
