@@ -20,6 +20,7 @@ import type {
   ReformEvaluationResult,
   ReviewModerationResult,
 } from './ai.types';
+import { IsbnLookupService, type BookMetadataLookupResult } from './isbn-lookup.service';
 import { detectSpoilerHeuristic, extractSpoilerFlagFromModel } from './spoiler.util';
 
 export type BookConditionEvaluation = {
@@ -33,7 +34,10 @@ type ImageInput = { buffer: Buffer; mimeType: string; label?: string };
 export class AiService {
   private readonly logger = new Logger(AiService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly isbnLookup: IsbnLookupService,
+  ) {}
 
   async evaluateBookCondition(imagePaths: { path: string; type: string }[]): Promise<BookConditionEvaluation> {
     const fallback: BookConditionEvaluation = {
@@ -137,6 +141,9 @@ export class AiService {
       titulo: '',
       autor: '',
       isbn: null,
+      editora: '',
+      ano_publicacao: null,
+      sinopse: null,
       confianca: 'baixa',
     };
 
@@ -159,13 +166,51 @@ export class AiService {
       }
       const titulo = this.extrairCampoTextoCapa(parsed, ['titulo', 'title', 'nome', 'titulo_livro']);
       const autor = this.extrairCampoTextoCapa(parsed, ['autor', 'author', 'autores', 'autor_livro']);
+      const editora = this.extrairCampoTextoCapa(parsed, ['editora', 'publisher', 'editor']);
+      const ano_publicacao = this.extrairAnoCapa(parsed);
       const isbnRaw = parsed.isbn ?? parsed.ISBN;
-      const isbn =
+      const isbnCapa =
         isbnRaw === null || isbnRaw === undefined
           ? null
-          : this.extrairCampoTextoCapa({ v: isbnRaw }, ['v']) || null;
+          : this.isbnLookup.normalizeIsbn(this.extrairCampoTextoCapa({ v: isbnRaw }, ['v']));
       const confianca = this.normalizarConfiancaCapa(parsed.confianca);
-      return { titulo, autor, isbn, confianca };
+
+      let isbn = isbnCapa;
+      let autorFinal = autor;
+      let editoraFinal = editora;
+      let anoFinal = ano_publicacao;
+      let sinopseFinal: string | null = null;
+
+      const precisaMetadadosExternos =
+        titulo &&
+        (!isbn || !autorFinal.trim() || !editoraFinal.trim() || !anoFinal);
+
+      if (precisaMetadadosExternos) {
+        const meta = await this.buscarMetadadosComTimeout(titulo, autor, 5000);
+        if (!isbn) {
+          isbn = meta.isbn;
+        }
+        if (!autorFinal.trim()) {
+          autorFinal = meta.autor ?? '';
+        }
+        if (!editoraFinal.trim()) {
+          editoraFinal = meta.editora ?? '';
+        }
+        if (!anoFinal) {
+          anoFinal = meta.ano_publicacao;
+        }
+        sinopseFinal = meta.sinopse;
+      }
+
+      return {
+        titulo,
+        autor: autorFinal,
+        isbn,
+        editora: editoraFinal,
+        ano_publicacao: anoFinal,
+        sinopse: sinopseFinal,
+        confianca,
+      };
     } catch (err) {
       this.logger.warn(`Falha na leitura de capa Gemini: ${err instanceof Error ? err.message : String(err)}`);
       return fallback;
@@ -371,6 +416,52 @@ export class AiService {
       }
     }
     return '';
+  }
+
+  private async buscarMetadadosComTimeout(
+    titulo: string,
+    autor: string,
+    timeoutMs: number,
+  ): Promise<BookMetadataLookupResult> {
+    const vazio: BookMetadataLookupResult = {
+      isbn: null,
+      autor: null,
+      editora: null,
+      ano_publicacao: null,
+      sinopse: null,
+    };
+
+    try {
+      return await Promise.race([
+        this.isbnLookup.lookupMetadata(titulo, autor),
+        new Promise<BookMetadataLookupResult>((resolve) => {
+          setTimeout(() => resolve(vazio), timeoutMs);
+        }),
+      ]);
+    } catch (err) {
+      this.logger.warn(
+        `Falha ao enriquecer metadados da capa: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return vazio;
+    }
+  }
+
+  private extrairAnoCapa(parsed: Record<string, unknown>): number | null {
+    const valor = parsed.ano_publicacao ?? parsed.ano ?? parsed.year ?? parsed.ano_publicacao_capa;
+    if (typeof valor === 'number' && Number.isFinite(valor)) {
+      const ano = Math.trunc(valor);
+      return ano >= 1000 && ano <= 2100 ? ano : null;
+    }
+    const texto = String(valor ?? '').trim();
+    if (!texto || texto.toLowerCase() === 'null') {
+      return null;
+    }
+    const match = texto.match(/\d{4}/);
+    if (!match) {
+      return null;
+    }
+    const ano = parseInt(match[0], 10);
+    return ano >= 1000 && ano <= 2100 ? ano : null;
   }
 
   private normalizarConfiancaCapa(valor: unknown): CoverIdentificationResult['confianca'] {

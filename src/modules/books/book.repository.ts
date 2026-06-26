@@ -24,6 +24,18 @@ export class BookRepository {
     });
   }
 
+  async findAutorByNome(nome: string) {
+    return this.prisma.autor.findFirst({
+      where: { nome_completo: { equals: nome, mode: 'insensitive' } },
+    });
+  }
+
+  async createAutor(nome: string) {
+    return this.prisma.autor.create({
+      data: { nome_completo: nome },
+    });
+  }
+
   async upsertImagemByTipo(id_livro: number, tipo_imagem: TipoImagem, url_imagem: string) {
     const ex = await this.prisma.imagemLivro.findFirst({ where: { id_livro, tipo_imagem } });
     if (ex) {

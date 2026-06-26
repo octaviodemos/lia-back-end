@@ -109,6 +109,8 @@ export function buildCoverIdentificationPrompt(): string {
     'Retorne EXCLUSIVAMENTE JSON com:\n' +
     '- "titulo": string (vazio se ilegível)\n' +
     '- "autor": string (vazio se ilegível; vários autores separados por vírgula)\n' +
+    '- "editora": string (vazio se ilegível)\n' +
+    '- "ano_publicacao": number ou null (ano de publicação visível na capa/lombada)\n' +
     '- "isbn": string só se ISBN estiver visível, senão null\n' +
     '- "confianca": "alta" | "media" | "baixa"'
   );

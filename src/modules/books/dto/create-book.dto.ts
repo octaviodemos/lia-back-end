@@ -29,6 +29,11 @@ export class CreateBookDto {
   @IsString()
   isbn?: string;
 
+  @ApiProperty({ example: 'Colleen Hoover', required: false })
+  @IsOptional()
+  @IsString()
+  autor?: string;
+
   @ApiProperty({ example: 5, description: 'Nota de 1 a 5 (estado físico do exemplar)' })
   @Type(() => Number)
   @IsInt()

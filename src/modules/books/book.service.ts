@@ -38,6 +38,19 @@ export class BookService {
       livroData.imagens = { create: imagemCreates };
     }
 
+    const autoresNomes = this.parseAutoresNomes(dto.autor);
+    if (autoresNomes.length) {
+      const vinculos: Prisma.LivroAutorCreateWithoutLivroInput[] = [];
+      for (const nome of autoresNomes) {
+        let autor = await this.repository.findAutorByNome(nome);
+        if (!autor) {
+          autor = await this.repository.createAutor(nome);
+        }
+        vinculos.push({ autor: { connect: { id_autor: autor.id_autor } } });
+      }
+      livroData.autores = { create: vinculos };
+    }
+
     const created = await this.repository.create(livroData);
     if (dto.preco) {
       await this.repository.createEstoqueInicial(created.id_livro, dto.preco);
@@ -445,5 +458,16 @@ export class BookService {
     }
 
     return { preco: min !== null ? min.toFixed(2) : null, id_estoque: minId };
+  }
+
+  private parseAutoresNomes(autor?: string): string[] {
+    if (!autor?.trim()) {
+      return [];
+    }
+    const nomes = autor
+      .split(/[,;|]/)
+      .map((nome) => nome.trim())
+      .filter(Boolean);
+    return [...new Set(nomes)];
   }
 }

@@ -141,6 +141,7 @@ export class BookController {
         editora: { type: 'string' },
         ano_publicacao: { type: 'integer' },
         isbn: { type: 'string' },
+        autor: { type: 'string' },
         nota_conservacao: { type: 'integer', minimum: 1, maximum: 5 },
         descricao_conservacao: { type: 'string' },
         destaque_vitrine: { type: 'boolean' },
