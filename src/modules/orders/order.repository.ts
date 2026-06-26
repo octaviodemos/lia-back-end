@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { normalizeOrderStatusCode } from '@/shared/utils/status.util';
 
 @Injectable()
 export class OrderRepository {
@@ -225,7 +226,15 @@ export class OrderRepository {
     const { page, limit, status, q, sort } = opts;
 
     const where: any = {};
-    if (status) where.status_pedido = status;
+    if (status) {
+      const code = normalizeOrderStatusCode(status);
+      const variants = new Set([
+        code,
+        code.toUpperCase(),
+        code.charAt(0).toUpperCase() + code.slice(1),
+      ]);
+      where.status_pedido = { in: Array.from(variants) };
+    }
 
     if (q) {
       const qNum = Number(q);

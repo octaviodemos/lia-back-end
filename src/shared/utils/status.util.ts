@@ -1,25 +1,51 @@
+export function normalizeOrderStatusCode(status?: string): string {
+  if (!status) return '';
+  const v = String(status).trim().toLowerCase();
+
+  const aliases: Record<string, string> = {
+    pendente: 'pending',
+    pagamento_pendente: 'pending',
+    pagamento_aprovado: 'paid',
+    pago: 'paid',
+    aprovado: 'paid',
+    approved: 'paid',
+    succeeded: 'paid',
+    'em processamento': 'processing',
+    enviado: 'shipped',
+    entregue: 'delivered',
+    cancelado: 'cancelled',
+    canceled: 'cancelled',
+    rejeitado: 'rejected',
+    failed: 'rejected',
+    rejected_by_network: 'rejected',
+    estornado: 'refunded',
+    chargeback: 'refunded',
+    refunded: 'refunded',
+  };
+
+  return aliases[v] || v;
+}
+
 export function mapOrderStatusToLabel(status?: string): string {
-  if (!status) return 'desconhecido';
-  const v = String(status).toLowerCase();
-  switch (v) {
-    case 'paid':
-    case 'succeeded':
-    case 'approved':
-      return 'aprovado';
+  const code = normalizeOrderStatusCode(status);
+  switch (code) {
     case 'pending':
+      return 'Pendente';
     case 'processing':
-      return 'pendente';
-    case 'failed':
-    case 'rejected':
-    case 'rejected_by_network':
-      return 'rejeitado';
-    case 'canceled':
+      return 'Em processamento';
+    case 'paid':
+      return 'Pago';
+    case 'shipped':
+      return 'Enviado';
+    case 'delivered':
+      return 'Entregue';
     case 'cancelled':
-      return 'cancelado';
+      return 'Cancelado';
+    case 'rejected':
+      return 'Rejeitado';
     case 'refunded':
-    case 'chargeback':
-      return 'estornado';
+      return 'Estornado';
     default:
-      return v;
+      return code ? code.charAt(0).toUpperCase() + code.slice(1) : 'Desconhecido';
   }
 }

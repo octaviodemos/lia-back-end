@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { OrderRepository } from './order.repository';
-import { mapOrderStatusToLabel } from '@/shared/utils/status.util';
+import { mapOrderStatusToLabel, normalizeOrderStatusCode } from '@/shared/utils/status.util';
 
 @Injectable()
 export class OrderService {
@@ -59,7 +59,8 @@ export class OrderService {
 
   async updateStatusById(id_pedido: number, status: string) {
     if (!status) throw new Error('status is required');
-    const updated = await this.orderRepository.updateStatusById(id_pedido, status);
+    const normalized = normalizeOrderStatusCode(status);
+    const updated = await this.orderRepository.updateStatusById(id_pedido, normalized);
     return this.normalizeOrder(updated);
   }
 

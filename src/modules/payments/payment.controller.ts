@@ -1,9 +1,11 @@
-import { Controller, Post, Get, Body, Res, Logger, Query, Req, Param, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Res, Logger, Query, Req, Param, BadRequestException, ForbiddenException, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { OrderService } from '../orders/order.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '@/core/decorators/current-user.decorator';
 
 @ApiTags('Pagamentos')
 @Controller('payments')
@@ -13,14 +15,18 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService, private readonly orderService: OrderService) {}
 
   @Post('create-checkout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
   @ApiOperation({ summary: 'Criar sessão de Checkout Stripe (hosted)' })
   async createCheckout(
     @Body()
-    body: { userId: string; email: string; frontend_total?: number; frontend_items?: any[] }
+    body: { userId?: string; email: string; frontend_total?: number; frontend_items?: any[] },
+    @CurrentUser('id') id_usuario: number,
   ) {
-    if (!body || !body.userId || !body.email) throw new Error('userId and email are required');
-    this.logger.log('createCheckout called', { userId: body.userId, email: body.email, frontend_total: body.frontend_total });
-    const result = await this.paymentService.createCheckoutSession(body.userId, body.email);
+    if (!body?.email) throw new BadRequestException('email is required');
+    const userId = String(id_usuario);
+    this.logger.log('createCheckout called', { userId, email: body.email, frontend_total: body.frontend_total });
+    const result = await this.paymentService.createCheckoutSession(userId, body.email);
     return { success: true, data: result };
   }
 
@@ -34,6 +40,10 @@ export class PaymentController {
       const session = await this.paymentService.retrieveCheckoutSession(sessionId);
       const paymentIntent = (session as any).payment_intent;
       const paid = paymentIntent ? (paymentIntent.status === 'succeeded') : (session.payment_status === 'paid');
+
+      if (paid) {
+        await this.tryFinalizeCheckoutSession(sessionId);
+      }
 
       const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
       const params = new URLSearchParams();
@@ -94,48 +104,8 @@ export class PaymentController {
 
       if (event.type === 'checkout.session.completed') {
         const session = event.data.object as any;
-        // Recupera a sessão expandida para garantir que payment_intent esteja disponível
-        const full = await this.paymentService.retrieveCheckoutSession(session.id);
-
-        // Diagnostic logs to help debugging when DB is not updated
-        this.logger.log('Webhook checkout.session.completed received', { sessionId: session.id, metadata: (full as any).metadata });
-
-        const userIdStr = (full as any).metadata?.userId;
-        const paymentIntent = (full as any).payment_intent as any;
-        const externalId = paymentIntent?.id || (full as any).payment_intent;
-        const amountTotal = (full as any).amount_total; // em centavos
-
-        this.logger.log('Webhook session details', { externalId, amountTotal, paymentIntent: paymentIntent ? { id: paymentIntent.id, status: paymentIntent.status } : null });
-
-        if (!userIdStr) {
-          this.logger.warn(`Webhook session ${session.id} has no metadata.userId — skipping automatic finalize`);
-        } else if (!externalId) {
-          this.logger.warn(`Webhook session ${session.id} has no payment intent/external id — skipping automatic finalize`);
-        } else {
-          const userId = Number(userIdStr);
-
-          // Verificar idempotência: se já existe um pedido com esse id_transacao_gateway, não criar de novo
-          try {
-            await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
-            this.logger.log(`Order already exists for external id ${externalId} (user ${userId}), skipping finalize`);
-          } catch (err) {
-            // se não existir, finalize o pedido a partir do carrinho
-            const paymentPayload = {
-              status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
-              id_transacao_gateway: String(externalId),
-              valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
-              metodo_pagamento: 'stripe',
-              payload_completo_gateway: full,
-            };
-
-            try {
-              const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
-              this.logger.log(`Order finalized from webhook: pedido.id=${(pedido as any)?.id_pedido} external=${externalId}`);
-            } catch (err) {
-              this.logger.error(`Failed to finalize order for user ${userId} external=${externalId}`, err as any);
-            }
-          }
-        }
+        this.logger.log('Webhook checkout.session.completed received', { sessionId: session.id });
+        await this.tryFinalizeCheckoutSession(session.id);
       }
 
       res.status(200).send({ received: true });
@@ -146,38 +116,17 @@ export class PaymentController {
   }
 
   @Post('finalize-session')
-  @ApiOperation({ summary: 'DEBUG: Forçar finalização de pedido a partir de uma Checkout Session (dev only)' })
+  @ApiOperation({ summary: 'Finalizar pedido a partir de uma Checkout Session paga' })
   async finalizeSession(@Body() body: { sessionId?: string }) {
     if (!body || !body.sessionId) throw new BadRequestException('sessionId is required in body');
-
-    const full = await this.paymentService.retrieveCheckoutSession(body.sessionId);
-    const userIdStr = (full as any).metadata?.userId;
-    const paymentIntent = (full as any).payment_intent as any;
-    const externalId = paymentIntent?.id || (full as any).payment_intent;
-    const amountTotal = (full as any).amount_total;
-
-    if (!userIdStr) throw new BadRequestException('session has no metadata.userId');
-    if (!externalId) throw new BadRequestException('session has no payment intent id');
-
-    const userId = Number(userIdStr);
-
-    try {
-      // check idempotency first
-      await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
-      return { success: false, message: 'Order already exists for this external id' };
-    } catch (err) {
-      // not found -> finalize
-      const paymentPayload = {
-        status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
-        id_transacao_gateway: String(externalId),
-        valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
-        metodo_pagamento: 'stripe',
-        payload_completo_gateway: full,
-      };
-
-      const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
-      return { success: true, pedido };
+    const result = await this.tryFinalizeCheckoutSession(body.sessionId);
+    if (result.skipped) {
+      return { success: false, message: result.reason || 'Não foi possível finalizar o pedido' };
     }
+    if (result.alreadyExists) {
+      return { success: true, alreadyExists: true, pedido: result.pedido };
+    }
+    return { success: true, pedido: result.pedido };
   }
 
   @Post('webhook-dev')
@@ -200,40 +149,70 @@ export class PaymentController {
       throw new BadRequestException('sessionId is required for checkout.session.completed');
     }
 
-    // Reuse same flow as real webhook: retrieve session then try finalize
-    const full = await this.paymentService.retrieveCheckoutSession(body.sessionId);
+    this.logger.log('webhook-dev invoked', { sessionId: body.sessionId });
+    const result = await this.tryFinalizeCheckoutSession(body.sessionId);
+    if (result.skipped) {
+      throw new BadRequestException(result.reason || 'Não foi possível finalizar o pedido');
+    }
+    if (result.alreadyExists) {
+      return { success: true, alreadyExists: true, pedido: result.pedido };
+    }
+    return { success: true, pedido: result.pedido };
+  }
+
+  private async tryFinalizeCheckoutSession(sessionId: string): Promise<{
+    skipped: boolean;
+    alreadyExists?: boolean;
+    pedido?: any;
+    reason?: string;
+  }> {
+    const full = await this.paymentService.retrieveCheckoutSession(sessionId);
     const userIdStr = (full as any).metadata?.userId;
     const paymentIntent = (full as any).payment_intent as any;
     const externalId = paymentIntent?.id || (full as any).payment_intent;
     const amountTotal = (full as any).amount_total;
 
-    this.logger.log('webhook-dev invoked', { sessionId: body.sessionId, metadata: (full as any).metadata });
+    this.logger.log('Checkout session finalize attempt', {
+      sessionId,
+      userId: userIdStr,
+      externalId,
+      paymentStatus: paymentIntent?.status || (full as any).payment_status,
+    });
 
     if (!userIdStr) {
-      throw new BadRequestException('session metadata.userId missing');
+      const reason = `Session ${sessionId} has no metadata.userId`;
+      this.logger.warn(reason);
+      return { skipped: true, reason };
     }
 
     if (!externalId) {
-      throw new BadRequestException('payment intent id not found in session');
+      const reason = `Session ${sessionId} has no payment intent id`;
+      this.logger.warn(reason);
+      return { skipped: true, reason };
     }
 
     const userId = Number(userIdStr);
+    const paymentPayload = {
+      status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
+      id_transacao_gateway: String(externalId),
+      valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
+      metodo_pagamento: 'stripe',
+      payload_completo_gateway: full,
+    };
 
     try {
-      await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
-      return { success: false, message: 'Order already exists for this external id' };
-    } catch (err) {
-      // finalize
-      const paymentPayload = {
-        status_pagamento: paymentIntent?.status || (full as any).payment_status || 'confirmed',
-        id_transacao_gateway: String(externalId),
-        valor_pago: typeof amountTotal === 'number' ? amountTotal / 100 : null,
-        metodo_pagamento: 'stripe',
-        payload_completo_gateway: full,
-      };
-
-      const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
-      return { success: true, pedido };
+      const existing = await this.orderService.getOrderStatusByExternalReference(String(externalId), userId);
+      this.logger.log(`Order already exists for external id ${externalId} (user ${userId})`);
+      return { skipped: false, alreadyExists: true, pedido: existing };
+    } catch {
+      try {
+        const pedido = await this.orderService.finalizeOrderFromCart(userId, paymentPayload);
+        this.logger.log(`Order finalized: pedido.id=${(pedido as any)?.id_pedido} external=${externalId}`);
+        return { skipped: false, pedido };
+      } catch (err) {
+        this.logger.error(`Failed to finalize order for user ${userId} external=${externalId}`, err as any);
+        return { skipped: true, reason: (err as any)?.message || 'Erro ao finalizar pedido' };
+      }
     }
   }
 }

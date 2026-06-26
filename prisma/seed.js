@@ -9,15 +9,37 @@ function openLibraryCover(isbn) {
   return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
 }
 
-function buildImagensCreateWithCapa(seedOffset, capaUrlPreferida) {
+function openLibraryCoverMedium(isbn) {
+  return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`;
+}
+
+function descricaoPorNota(nota) {
+  if (nota >= 5) return 'Excelente estado de conservação';
+  if (nota >= 4) return 'Bom estado, leves marcas de uso';
+  if (nota >= 3) return 'Estado regular, uso moderado';
+  return 'Estado com avarias visíveis na capa e lombada';
+}
+
+function buildImagensLivro(isbn, capaUrlPreferida, notaConservacao) {
   const capa =
     capaUrlPreferida && String(capaUrlPreferida).length > 0 && String(capaUrlPreferida).length <= 255
       ? String(capaUrlPreferida)
-      : null;
-  if (!capa) return [];
-  return [
+      : openLibraryCover(isbn);
+  const key = String(isbn || '0').replace(/\D/g, '').slice(-8) || '0';
+  const imagens = [
     { url_imagem: capa, tipo_imagem: TipoImagem.Capa },
+    { url_imagem: openLibraryCoverMedium(isbn), tipo_imagem: TipoImagem.Contracapa },
+    { url_imagem: `https://covers.openlibrary.org/b/isbn/${isbn}-S.jpg`, tipo_imagem: TipoImagem.Lombada },
+    { url_imagem: `https://picsum.photos/seed/lia-miolo-${key}/480/320`, tipo_imagem: TipoImagem.MioloPaginas },
+    {
+      url_imagem:
+        notaConservacao <= 3
+          ? `https://picsum.photos/seed/lia-avaria-${key}/480/320`
+          : `https://picsum.photos/seed/lia-detalhe-${key}/480/320`,
+      tipo_imagem: TipoImagem.DetalhesAvarias,
+    },
   ];
+  return imagens.filter((i) => i.url_imagem.length <= 255);
 }
 
 function variantesQuatroExemplares(precoReferencia) {
@@ -134,7 +156,7 @@ async function importBooks() {
           nota_conservacao: 5,
           descricao_conservacao: null,
           imagens: {
-            create: buildImagensCreateWithCapa(3000 + bi, b.capa_url || null),
+            create: buildImagensLivro(b.isbn, b.capa_url || null, 5),
           },
         },
       });
@@ -428,10 +450,10 @@ async function criarLivroCatalogo(b, seedIdx) {
       ano_publicacao: b.ano,
       isbn: b.isbn,
       nota_conservacao: b.nota,
-      descricao_conservacao: null,
+      descricao_conservacao: descricaoPorNota(b.nota),
       destaque_vitrine: !!b.destaque,
       imagens: {
-        create: buildImagensCreateWithCapa(seedIdx, b.capa || null),
+        create: buildImagensLivro(b.isbn, b.capa || null, b.nota),
       },
     },
   });
@@ -601,49 +623,69 @@ async function seedFromOpenLibrary() {
   console.log('\n📚 Iniciando seed com capas da Open Library...\n');
   let created = 0, skipped = 0;
 
-  for (const b of LIVROS_OPEN_LIBRARY) {
-    try {
-      const existing = await prisma.livro.findFirst({ where: { isbn: b.isbn } });
-      if (existing) { skipped++; continue; }
+  for (const grupo of LIVROS_OPEN_LIBRARY) {
+    if (!grupo.isbn) continue;
+    const variantes = variantesQuatroExemplares(grupo.preco);
 
-      const capaUrl = openLibraryCover(b.isbn);
-
-      const createdLivro = await prisma.livro.create({
-        data: {
-          titulo: b.titulo,
-          sinopse: b.sinopse || null,
-          editora: b.editora || null,
-          ano_publicacao: b.ano || null,
-          isbn: b.isbn,
-          nota_conservacao: 5,
-          descricao_conservacao: null,
-          destaque_vitrine: !!b.destaque,
-          imagens: {
-            create: buildImagensCreateWithCapa(9000 + created, capaUrl),
+    for (const ex of variantes) {
+      try {
+        const dup = await prisma.livro.findFirst({
+          where: {
+            isbn: grupo.isbn,
+            titulo: grupo.titulo,
+            nota_conservacao: ex.nota,
+            estoque: { some: { preco: ex.preco } },
           },
-        },
-      });
+        });
+        if (dup) {
+          skipped++;
+          continue;
+        }
 
-      for (const authorName of (b.autores || [])) {
-        let author = await prisma.autor.findFirst({ where: { nome_completo: authorName } });
-        if (!author) author = await prisma.autor.create({ data: { nome_completo: authorName } });
-        await prisma.livroAutor.create({ data: { id_livro: createdLivro.id_livro, id_autor: author.id_autor } });
+        const capaUrl = grupo.capa || openLibraryCover(grupo.isbn);
+
+        const createdLivro = await prisma.livro.create({
+          data: {
+            titulo: grupo.titulo,
+            sinopse: grupo.sinopse || null,
+            editora: grupo.editora || null,
+            ano_publicacao: grupo.ano || null,
+            isbn: grupo.isbn,
+            nota_conservacao: ex.nota,
+            descricao_conservacao: descricaoPorNota(ex.nota),
+            destaque_vitrine: !!ex.destaque || !!grupo.destaque,
+            imagens: {
+              create: buildImagensLivro(grupo.isbn, capaUrl, ex.nota),
+            },
+          },
+        });
+
+        for (const authorName of (grupo.autores || [])) {
+          let author = await prisma.autor.findFirst({ where: { nome_completo: authorName } });
+          if (!author) author = await prisma.autor.create({ data: { nome_completo: authorName } });
+          await prisma.livroAutor.create({ data: { id_livro: createdLivro.id_livro, id_autor: author.id_autor } });
+        }
+
+        for (const generoName of (grupo.generos || [])) {
+          let genero = await prisma.genero.findUnique({ where: { nome: generoName } }).catch(() => null);
+          if (!genero) genero = await prisma.genero.create({ data: { nome: generoName } });
+          await prisma.livroGenero.create({ data: { id_livro: createdLivro.id_livro, id_genero: genero.id_genero } });
+        }
+
+        await prisma.estoque.create({
+          data: {
+            id_livro: createdLivro.id_livro,
+            preco: ex.preco || grupo.preco || '29.90',
+            condicao: ex.nota >= 4 ? 'novo' : 'usado',
+            disponivel: true,
+          },
+        });
+
+        created++;
+        console.log(`  ✓ ${grupo.titulo} (nota ${ex.nota}, R$ ${ex.preco})`);
+      } catch (err) {
+        console.error(`  ✗ Erro ao criar ${grupo.titulo} (nota ${ex.nota}):`, err.message || err);
       }
-
-      for (const generoName of (b.generos || [])) {
-        let genero = await prisma.genero.findUnique({ where: { nome: generoName } }).catch(() => null);
-        if (!genero) genero = await prisma.genero.create({ data: { nome: generoName } });
-        await prisma.livroGenero.create({ data: { id_livro: createdLivro.id_livro, id_genero: genero.id_genero } });
-      }
-
-      await prisma.estoque.create({
-        data: { id_livro: createdLivro.id_livro, preco: b.preco || '29.90', condicao: 'novo', disponivel: true },
-      });
-
-      created++;
-      console.log(`  ✓ ${b.titulo} — capa: ${capaUrl}`);
-    } catch (err) {
-      console.error(`  ✗ Erro ao criar ${b.titulo}:`, err.message || err);
     }
   }
   console.log(`\n📚 Open Library seed concluído: ${created} criados, ${skipped} já existiam\n`);
@@ -655,12 +697,15 @@ async function runAll() {
     await seedUsuariosClientes();
     
     console.log('Limpando livros antigos do banco...');
+    await prisma.carrinhoItem.deleteMany();
+    await prisma.itemPedido.deleteMany();
     await prisma.estoque.deleteMany();
     await prisma.livroAutor.deleteMany();
     await prisma.livroGenero.deleteMany();
     await prisma.imagemLivro.deleteMany();
     await prisma.livro.deleteMany();
 
+    await seedLivrosCatalogo();
     await seedFromOpenLibrary();
   } catch (e) {
     console.error(e);
